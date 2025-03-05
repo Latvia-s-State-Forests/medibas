@@ -1,0 +1,32 @@
+{
+    "observations": [
+        {
+            "type": "Feature",
+            "properties": {
+                "speciesId": 1,
+                "description": "Alnis(2022.11.03 12:43)",
+                "species": "Alnis",
+                "observationTypeId": 1
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [24.0917209, 56.918666]
+            }
+        }
+    ],
+    "damages": [
+        {
+            "type": "Feature",
+            "properties": {
+                "speciesId": 43,
+                "description": "Meža zoss(2022.02.21 00:04)",
+                "species": "Meža zoss",
+                "type": 1
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [21.0019008, 56.5125781]
+            }
+        }
+    ]
+}

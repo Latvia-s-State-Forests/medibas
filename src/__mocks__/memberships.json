@@ -1,0 +1,32 @@
+[
+    {
+        "id": 1,
+        "name": "Pirmais medību iecirknis",
+        "members": [
+            {
+                "id": 1,
+                "userId": 1,
+                "cardNumber": "H1111",
+                "roles": ["administrator", "trustee", "hunter", "member"],
+                "firstName": "Jānis",
+                "lastName": "Bērziņš",
+                "validSeasonCard": {
+                    "validFrom": "2022-04-01T00:00:00+03:00",
+                    "validTo": "2026-04-01T00:00:00+03:00"
+                }
+            },
+            {
+                "id": 2,
+                "userId": 2,
+                "cardNumber": "H2222",
+                "roles": ["hunter", "manager", "member"],
+                "firstName": "Pēteris",
+                "lastName": "Zariņš",
+                "validSeasonCard": {
+                    "validFrom": "2022-04-01T00:00:00+03:00",
+                    "validTo": "2026-04-01T00:00:00+03:00"
+                }
+            }
+        ]
+    }
+]

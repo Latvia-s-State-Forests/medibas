@@ -1,0 +1,46 @@
+{
+    "id": 1,
+    "personId": 1,
+    "vmdId": "1",
+    "firstName": "Jānis",
+    "lastName": "Bērziņš",
+    "isHunter": true,
+    "isHuntManager": true,
+    "validHuntersCardNumber": "H1111",
+    "validHuntManagerCardNumber": "M1111",
+    "hunterCards": [
+        {
+            "id": 1,
+            "cardNumber": "H1111",
+            "cardTypeId": 1,
+            "validFrom": "2022-04-01T00:00:00+03:00",
+            "validTo": "2026-03-31T00:00:00+03:00"
+        },
+        {
+            "id": 2,
+            "cardNumber": "M111",
+            "cardTypeId": 2,
+            "validFrom": "2022-04-01T00:00:00+03:00",
+            "validTo": "2026-03-31T00:00:00+03:00"
+        },
+        {
+            "id": 3,
+            "cardNumber": "S111",
+            "cardTypeId": 3,
+            "validFrom": "2022-04-01T00:00:00+03:00",
+            "validTo": "2026-04-01T00:00:00+03:00"
+        }
+    ],
+    "memberships": [
+        {
+            "id": 1,
+            "huntingDistrictId": 1,
+            "huntingDistrict": { "id": 1, "descriptionLv": "Pirmais medību iecirknis" },
+            "isMember": true,
+            "isHunter": true,
+            "isManager": true,
+            "isAdministrator": true,
+            "isTrustee": true
+        }
+    ]
+}

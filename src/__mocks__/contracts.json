@@ -1,0 +1,64 @@
+{
+    "contracts": [
+        {
+            "id": 9,
+            "masterDistrictId": 1,
+            "contractNumber": "1-2-alnis",
+            "districts": [
+                {
+                    "districtId": 1,
+                    "descriptionLv": "Pirmais medību iecirknis"
+                },
+                {
+                    "districtId": 2,
+                    "descriptionLv": "Otrais medību iecirknis"
+                }
+            ],
+            "permits": [
+                {
+                    "permitTypeId": 1,
+                    "used": 5,
+                    "issued": 42,
+                    "available": 37,
+                    "assignedPermits": [
+                        {
+                            "districtId": 1,
+                            "unused": 0
+                        }
+                    ]
+                },
+                {
+                    "permitTypeId": 2,
+                    "used": 0,
+                    "issued": 36,
+                    "available": 36,
+                    "assignedPermits": []
+                },
+                {
+                    "permitTypeId": 3,
+                    "used": 2,
+                    "issued": 37,
+                    "available": 35,
+                    "assignedPermits": [
+                        {
+                            "districtId": 1,
+                            "unused": 15
+                        },
+                        {
+                            "districtId": 2,
+                            "unused": 17
+                        }
+                    ]
+                },
+                {
+                    "permitTypeId": 4,
+                    "used": 0,
+                    "issued": 32,
+                    "available": 32,
+                    "assignedPermits": []
+                }
+            ]
+        }
+    ],
+    "status": "ok"
+}
