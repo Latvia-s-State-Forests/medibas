@@ -55,7 +55,7 @@ export function usePushNotifications() {
             const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
 
             // Avoid submitting push notification token to API during development, because doing so would result in errors when sending notifications to mixed clients
-            if (!__DEV__) {
+            if (__DEV__) {
                 return;
             }
 
