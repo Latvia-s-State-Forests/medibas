@@ -297,7 +297,11 @@ export function DrivenHuntFormScreen({ route }: DrivenHuntFormScreenProps) {
                 <FieldLabel label={t("hunt.drivenHunt.meetingPlace")} />
                 <Spacer size={16} />
                 <View style={styles.map}>
-                    <PositionSelect onMark={onSelectPosition} position={drivenHunt.selectedPosition} />
+                    <PositionSelect
+                        positionType="drivenHunt"
+                        onMark={onSelectPosition}
+                        position={drivenHunt.selectedPosition}
+                    />
                 </View>
                 <Spacer size={16} />
                 <CheckboxList

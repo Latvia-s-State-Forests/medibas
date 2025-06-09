@@ -9,6 +9,7 @@ export type ClassifierOptionDescription = z.infer<typeof classifierOptionDescrip
 
 export const classifierOptionSchema = z.object({
     id: z.number(),
+    code: z.string().optional(),
     activeFrom: z.string().optional(),
     activeTo: z.string().optional(),
     description: classifierOptionDescriptionSchema,
@@ -106,6 +107,18 @@ const huntingSeasonsClassifierSchema = classifierSchema.extend({
 });
 export type HuntingSeasonsClassifier = z.infer<typeof huntingSeasonsClassifierSchema>;
 
+const huntingInfrastructureTypesOptionSchema = classifierOptionSchema.extend({
+    listOrder: z.number().optional(),
+    code: z.string().optional(),
+});
+export type HuntingInfrastructureTypesOption = z.infer<typeof huntingInfrastructureTypesOptionSchema>;
+
+const huntingInfrastructureTypesClassifierSchema = classifierSchema.extend({
+    options: z.array(huntingInfrastructureTypesOptionSchema),
+});
+
+export type HuntingInfrastructureTypesClassifier = z.infer<typeof huntingInfrastructureTypesClassifierSchema>;
+
 export const permitTypeClassifierOptionSchema = classifierOptionSchema.extend({
     seasonEndDay: z.number(),
     seasonEndMonth: z.number(),
@@ -163,6 +176,8 @@ export const classifiersSchema = z.object({
     huntedTypes: classifierSchema,
     huntersCardTypes: classifierSchema,
     huntingSeasons: huntingSeasonsClassifierSchema,
+    huntingInfrastructureTypes: huntingInfrastructureTypesClassifierSchema,
+    mapServices: classifierSchema,
     infrastructureTypes: classifierSchema,
     observationTypes: classifierSchema,
     observedSigns: classifierSchema,
@@ -251,7 +266,52 @@ export type MainObservationSpecies =
     | SpeciesId.Beaver
     | SpeciesId.EuropeanPineMarten
     | SpeciesId.OtherMammals
-    | SpeciesId.Birds;
+    | SpeciesId.Birds
+    | SpeciesId.WesternCapercaillie
+    | SpeciesId.BlackGrouse
+    | SpeciesId.Fox
+    | SpeciesId.Raccoon
+    | SpeciesId.Badger
+    | SpeciesId.Hare
+    | SpeciesId.EuropeanHare
+    | SpeciesId.MountainHare
+    | SpeciesId.Marten
+    | SpeciesId.BeechMarten
+    | SpeciesId.Polecat
+    | SpeciesId.AmericanMink
+    | SpeciesId.RaccoonDog
+    | SpeciesId.Muskrat
+    | SpeciesId.FallowDeer
+    | SpeciesId.Mouflon
+    | SpeciesId.SikaDeer
+    | SpeciesId.Nutria
+    | SpeciesId.BobakMarmot
+    | SpeciesId.GoldenJackal
+    | SpeciesId.Bear
+    | SpeciesId.HazelGrouse
+    | SpeciesId.Rackelhahn
+    | SpeciesId.Pheasant
+    | SpeciesId.CommonWoodPigeon
+    | SpeciesId.DomesticPigeon
+    | SpeciesId.EurasianWoodcock
+    | SpeciesId.HoodedCrow
+    | SpeciesId.EurasianMagpie
+    | SpeciesId.BeanGoose
+    | SpeciesId.GreaterWhiteFrontedGoose
+    | SpeciesId.CanadaGoose
+    | SpeciesId.GreylagGoose
+    | SpeciesId.EurasianCoot
+    | SpeciesId.EurasianTeal
+    | SpeciesId.Gadwall
+    | SpeciesId.NorthernShoveler
+    | SpeciesId.Mallard
+    | SpeciesId.Garganey
+    | SpeciesId.EurasianWigeon
+    | SpeciesId.NorthernPintail
+    | SpeciesId.TuftedDuck
+    | SpeciesId.GreaterScaup
+    | SpeciesId.CommonScoter
+    | SpeciesId.CommonGoldeneye;
 
 export enum GenderId {
     Male = 1,
@@ -294,6 +354,15 @@ export enum DamageTypeId {
     AgriculturalLand = 1,
     Forest = 2,
     Infrastructure = 3,
+}
+
+export enum HuntingInfrastructureTypeId {
+    HuntTower = 1,
+    FeedingPlace = 2,
+    AnimalFeedingPlot = 6,
+    Bridge = 3,
+    Footbridge = 4,
+    ShootingLane = 5,
 }
 
 export enum AgriculturalLandTypeId {

@@ -8,8 +8,10 @@ import { Collapsible } from "~/components/collapsible/collapsible";
 import { Header } from "~/components/header";
 import { ImageButton } from "~/components/image-button";
 import { configuration } from "~/configuration";
+import { useClassifiers } from "~/hooks/use-classifiers";
 import { useDistricts } from "~/hooks/use-districts";
 import { usePermissions } from "~/hooks/use-permissions";
+import { getAppLanguage } from "~/i18n";
 import { mapService } from "~/machines/map-machine";
 
 function getColumnCount(containerWidth: number, itemWidth: number, gap: number): number {
@@ -36,6 +38,8 @@ export function MapSettingsModal() {
     const [width, setWidth] = React.useState(Dimensions.get("window").width);
     const permissions = usePermissions();
     const districts = useDistricts();
+    const classifiers = useClassifiers();
+    const language = getAppLanguage();
 
     function handleLayerChange(layerId: string) {
         layerSend({ type: "TOGGLE_LAYER", layerId });
@@ -53,9 +57,40 @@ export function MapSettingsModal() {
                     return false;
                 }
 
+                if (service.id === "district-infrastructures" && !permissions.viewInfrastructuresLayer) {
+                    return false;
+                }
+
+                const huntedAnimalServices = [
+                    "district-hunted-others",
+                    "district-hunted-moose",
+                    "district-hunted-red-deer",
+                    "district-hunted-roe-deer",
+                    "district-hunted-boar",
+                ];
+
+                if (huntedAnimalServices.includes(service.id) && !permissions.viewHuntedAnimalsOnMap) {
+                    return false;
+                }
+
                 return services.includes(service.id);
             })
-            .map(({ id, thumbnail, title }) => ({ id, thumbnail, title }));
+            .map(({ id: serviceId, thumbnail }) => {
+                const serviceClassifier = classifiers.mapServices?.options.find((option) => option.code === serviceId);
+
+                let serviceTitle;
+                if (serviceClassifier?.description && language && serviceClassifier.description[language]) {
+                    serviceTitle = serviceClassifier.description[language];
+                } else {
+                    serviceTitle = "-";
+                }
+
+                return {
+                    id: serviceId,
+                    thumbnail,
+                    title: serviceTitle,
+                };
+            });
 
         return { id, title, services: groupServices };
     });
@@ -77,7 +112,7 @@ export function MapSettingsModal() {
                             <ImageButton
                                 checked={layerState.context.activeLayerIds.includes(item.id)}
                                 onPress={() => handleLayerChange(item.id)}
-                                label={t(item.title)}
+                                label={item.title || "-"}
                                 imageName={item.thumbnail}
                             />
                         </View>

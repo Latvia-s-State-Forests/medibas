@@ -9,6 +9,7 @@ import { Select } from "~/components/select";
 import { SettingsButton } from "~/components/settings-button";
 import { Spacer } from "~/components/spacer";
 import { useInjuredAnimalPermits } from "~/hooks/use-injured-animal-permits";
+import { usePermissions } from "~/hooks/use-permissions";
 import { useProfile } from "~/hooks/use-profile";
 import { useSelectedDistrictId } from "~/hooks/use-selected-district-id";
 import { queryClient, queryKeys } from "~/query-client";
@@ -23,6 +24,7 @@ export function HuntScreen() {
     const injuredAnimalsCount = injuredAnimalPermits.length;
     const huntActivitiesCount = useHuntActivitiesCount();
     const pendingHuntActivitiesCount = usePendingHuntActivitiesCount();
+    const permissions = usePermissions();
 
     useFocusEffect(
         React.useCallback(() => {
@@ -47,6 +49,8 @@ export function HuntScreen() {
     function onNavigateIndividualHunt() {
         navigation.navigate("IndividualHuntListScreen");
     }
+
+    const hasPermissionToRegisterHunt = permissions.registerHunt;
 
     return (
         <ScreenBackgroundLayout style={styles.container}>
@@ -87,28 +91,32 @@ export function HuntScreen() {
                             iconName="huntTarget"
                         />
                     </View>
-                    <View style={styles.row}>
-                        {huntActivitiesCount > 0 ? (
-                            <CardButton
-                                badgeCount={pendingHuntActivitiesCount}
-                                radius="small"
-                                active={false}
-                                onPress={onNavigateActivitiesList}
-                                style={styles.cardButton}
-                                label={t("hunt.huntActivitiesList.title")}
-                                iconName="tracking"
-                            />
-                        ) : null}
-                        <CardButton
-                            badgeCount={injuredAnimalsCount}
-                            radius="small"
-                            active={false}
-                            onPress={onNavigateRegisterPrey}
-                            style={styles.cardButton}
-                            label={t("hunt.registerPrey")}
-                            iconName="register"
-                        />
-                    </View>
+                    {huntActivitiesCount > 0 || hasPermissionToRegisterHunt ? (
+                        <View style={styles.row}>
+                            {huntActivitiesCount > 0 ? (
+                                <CardButton
+                                    badgeCount={pendingHuntActivitiesCount}
+                                    radius="small"
+                                    active={false}
+                                    onPress={onNavigateActivitiesList}
+                                    style={styles.cardButton}
+                                    label={t("hunt.huntActivitiesList.title")}
+                                    iconName="tracking"
+                                />
+                            ) : null}
+                            {hasPermissionToRegisterHunt ? (
+                                <CardButton
+                                    badgeCount={injuredAnimalsCount}
+                                    radius="small"
+                                    active={false}
+                                    onPress={onNavigateRegisterPrey}
+                                    style={styles.cardButton}
+                                    label={t("hunt.registerPrey")}
+                                    iconName="register"
+                                />
+                            ) : null}
+                        </View>
+                    ) : null}
                 </View>
             </View>
         </ScreenBackgroundLayout>

@@ -6530,5 +6530,333 @@
             }
         ]
     },
+    "huntingInfrastructureTypes": {
+        "options": [
+            {
+                "listOrder": 1,
+                "id": 1,
+                "code": "HUNTING_TOWER",
+                "description": {
+                    "lv": "Medību tornis",
+                    "en": "Hunting tower",
+                    "ru": "Охотничья вышка"
+                }
+            },
+            {
+                "listOrder": 2,
+                "id": 2,
+                "code": "FEEDING_SITE",
+                "description": {
+                    "lv": "Dzīvnieku piebarošanas vieta",
+                    "en": "Animal feeding site",
+                    "ru": "Место подкормки животных"
+                }
+            },
+            {
+                "listOrder": 4,
+                "id": 3,
+                "code": "BRIDGE",
+                "description": {
+                    "lv": "Tilts",
+                    "en": "Bridge",
+                    "ru": "Мост"
+                }
+            },
+            {
+                "listOrder": 5,
+                "id": 4,
+                "code": "BOARDWALK",
+                "description": {
+                    "lv": "Laipa",
+                    "en": "Boardwalk",
+                    "ru": "Пешеходный мостик"
+                }
+            },
+            {
+                "listOrder": 6,
+                "id": 5,
+                "code": "SHOOTING_LANE",
+                "description": {
+                    "lv": "Šaušanas stidziņa",
+                    "en": "Shooting lane",
+                    "ru": "Стрельбовой коридор"
+                }
+            },
+            {
+                "listOrder": 3,
+                "id": 6,
+                "code": "FEEDING_FIELD",
+                "description": {
+                    "lv": "Dzīvnieku piebarošanas lauks",
+                    "en": "Game feeding field",
+                    "ru": "Поле для подкормки диких животных"
+                }
+            }
+        ]
+    },
+    "mapServices": {
+        "options": [
+            {
+                "id": 1,
+                "code": "african-swine-fever-2023-positive",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "ĀCM izplatība (pozitīvie, 2023)",
+                    "en": "ASF prevalence (positive, 2023)",
+                    "ru": "АЧС распространенность (положительные, 2023)"
+                }
+            },
+            {
+                "id": 2,
+                "code": "asf-zones",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "ĀCM skartie pagasti",
+                    "en": "ASF affected parishes",
+                    "ru": "АЧС затронутые волости"
+                }
+            },
+            {
+                "id": 3,
+                "code": "damages",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Mani postījumi",
+                    "en": "My damages",
+                    "ru": "Мои повреждения"
+                }
+            },
+            {
+                "id": 4,
+                "code": "damages-agricultural-land",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "LIZ Postījumi",
+                    "en": "Agricultural land damages",
+                    "ru": "Ущерб сельскохозяйственным угодьям"
+                }
+            },
+            {
+                "id": 5,
+                "code": "damages-forest",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Meža postījumi",
+                    "en": "Forest damages",
+                    "ru": "Ущерб лесу"
+                }
+            },
+            {
+                "id": 6,
+                "code": "damages-infrastructure",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Infrastruktūras postījumi",
+                    "en": "Infrastructure damages",
+                    "ru": "Ущерб инфраструктуре"
+                }
+            },
+            {
+                "id": 7,
+                "code": "district-damages",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Postījumi iecirkņos (pēdējie 3 mēneši)",
+                    "en": "Damages in districts (last 3 months)",
+                    "ru": "Повреждения в угодьи (последнии 3 месяца)"
+                }
+            },
+            {
+                "id": 8,
+                "code": "district-hunted-boar",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Nomedītie iecirknī - Meža cūka",
+                    "en": "Hunted in district - Wild boar",
+                    "ru": "Добытые в угодьи - Кабан"
+                }
+            },
+            {
+                "id": 9,
+                "code": "district-hunted-moose",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Nomedītie iecirknī - Alnis",
+                    "en": "Hunted in district - Moose",
+                    "ru": "Добытые в угодьи - Лось"
+                }
+            },
+            {
+                "id": 10,
+                "code": "district-hunted-others",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Nomedītie iecirknī - Pārējie dzīvnieki",
+                    "en": "Hunted in district - Other animals",
+                    "ru": "Добытые в угодьи - Другие животные"
+                }
+            },
+            {
+                "id": 11,
+                "code": "district-hunted-red-deer",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Nomedītie iecirknī - Staltbriedis",
+                    "en": "Hunted in district - Red deer",
+                    "ru": "Добытые в угодьи - Благородный олень"
+                }
+            },
+            {
+                "id": 12,
+                "code": "district-hunted-roe-deer",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Nomedītie iecirknī - Stirna",
+                    "en": "Hunted in district - Roe deer",
+                    "ru": "Добытые на угодьи - Косуля"
+                }
+            },
+            {
+                "id": 13,
+                "code": "district-infrastructures",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Infrastruktūra iecirkņos",
+                    "en": "Infrastructure in districts",
+                    "ru": "Инфраструктура в угодье"
+                }
+            },
+            {
+                "id": 14,
+                "code": "districts",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Medību iecirkņi",
+                    "en": "Districts",
+                    "ru": "Охотничье угодье"
+                }
+            },
+            {
+                "id": 15,
+                "code": "hunted-moose",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Nomedīti aļņi (aktuālā sezona, Mednis dati)",
+                    "en": "Hunted moose (current season, Mednis data)",
+                    "ru": "Добытые лоси (текущий сезон, данные Mednis)"
+                }
+            },
+            {
+                "id": 16,
+                "code": "hunted-red-deer",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Nomedīti staltbrieži (aktuālā sezona, Mednis dati)",
+                    "en": "Hunted red deer (current season, Mednis data)",
+                    "ru": "Добытые олени (текущий сезон, данные Mednis)"
+                }
+            },
+            {
+                "id": 17,
+                "code": "hunted-roe-deer",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Nomedītas stirnas (aktuālā sezona, Mednis dati)",
+                    "en": "Hunted roe deer (current season, Mednis data)",
+                    "ru": "Добытые косули (текущий сезон, данные Mednis)"
+                }
+            },
+            {
+                "id": 18,
+                "code": "hunted-wild-boar",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Nomedītas meža cūkas (aktuālā sezona, Mednis dati)",
+                    "en": "Hunted wild boars (current season, Mednis data)",
+                    "ru": "Добытые кабаны (текущий сезон, данные Mednis)"
+                }
+            },
+            {
+                "id": 19,
+                "code": "hunted-wolf",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Nomedīti vilki (aktuālā sezona, Mednis dati)",
+                    "en": "Hunted wolves (current season, Mednis data)",
+                    "ru": "Добытые волки (текущий сезон, данные Mednis)"
+                }
+            },
+            {
+                "id": 20,
+                "code": "lad-lb",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "LAD lauku reģistrs",
+                    "en": "State Rural Support Service",
+                    "ru": "Служба поддержки сельского хозяйства"
+                }
+            },
+            {
+                "id": 21,
+                "code": "lvm-forest-map",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Fona karte",
+                    "en": "Base map",
+                    "ru": "Фоновая карта"
+                }
+            },
+            {
+                "id": 22,
+                "code": "observations",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Mani novērojumi",
+                    "en": "My observations",
+                    "ru": "Мои наблюдения"
+                }
+            },
+            {
+                "id": 23,
+                "code": "orthophoto",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Ortofoto",
+                    "en": "Orthophoto",
+                    "ru": "Ортофото"
+                }
+            },
+            {
+                "id": 24,
+                "code": "terrain-model",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "Reljefa modelis",
+                    "en": "Terrain model",
+                    "ru": "Модель рельефа"
+                }
+            },
+            {
+                "id": 25,
+                "code": "vzd-cadaster",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "VZD kadastrs",
+                    "en": "SLS cadastre",
+                    "ru": "VZD кадастр"
+                }
+            },
+            {
+                "id": 26,
+                "code": "zmni-melioration",
+                "modifiedDate": "2025-05-14T00:00:00+03:00",
+                "description": {
+                    "lv": "ZMNĪ meliorācijas kadastrs",
+                    "en": "Land reclamation cadastre",
+                    "ru": "Мелиоративный кадастр"
+                }
+            }
+        ]
+    },
     "status": "ok"
 }

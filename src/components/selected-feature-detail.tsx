@@ -8,16 +8,34 @@ import { getAppLanguage } from "~/i18n";
 import { DistrictDamageFields } from "~/screens/damage/district-damage/district-damage-fields";
 import { DistrictDamage } from "~/types/district-damages";
 import { Feature } from "~/types/features";
+import { HuntedAnimal } from "~/types/hunted-animals";
+import { Infrastructure } from "~/types/infrastructure";
 import { getDescriptionForClassifierOption } from "~/utils/classifiers";
 import { formatDateTime } from "~/utils/format-date-time";
+import { DistrictHuntedAnimalFields } from "../screens/hunt/district-hunted-animal-fields";
+import { DistrictInfrastructureFields } from "../screens/infrastructure/district-infrastructure-fields";
 import { Text } from "./text";
 
 type SelectedFeatureDetailProps = {
     selectedFeatureData:
         | (Feature & { featureType: "damages" | "observations" })
         | (DistrictDamage & { featureType: "district-damages" })
+        | (Infrastructure & { featureType: "district-infrastructures" })
+        | (HuntedAnimal & { featureType: "district-hunted-others" })
+        | (HuntedAnimal & { featureType: "district-hunted-red-deer" })
+        | (HuntedAnimal & { featureType: "district-hunted-moose" })
+        | (HuntedAnimal & { featureType: "district-hunted-roe-deer" })
+        | (HuntedAnimal & { featureType: "district-hunted-boar" })
         | undefined;
 };
+
+function animatedScrollView(content: React.ReactNode) {
+    return (
+        <Animated.ScrollView contentContainerStyle={styles.scroll} entering={FadeInRight} exiting={FadeOutRight}>
+            {content}
+        </Animated.ScrollView>
+    );
+}
 
 export default function SelectedFeatureDetail(props: SelectedFeatureDetailProps) {
     const { t } = useTranslation();
@@ -33,11 +51,21 @@ export default function SelectedFeatureDetail(props: SelectedFeatureDetailProps)
     }
 
     if (props.selectedFeatureData.featureType === "district-damages") {
-        return (
-            <Animated.ScrollView contentContainerStyle={styles.scroll} entering={FadeInRight} exiting={FadeOutRight}>
-                <DistrictDamageFields damage={props.selectedFeatureData} />
-            </Animated.ScrollView>
-        );
+        return animatedScrollView(<DistrictDamageFields damage={props.selectedFeatureData} />);
+    }
+
+    if (
+        props.selectedFeatureData.featureType === "district-hunted-others" ||
+        props.selectedFeatureData.featureType === "district-hunted-red-deer" ||
+        props.selectedFeatureData.featureType === "district-hunted-moose" ||
+        props.selectedFeatureData.featureType === "district-hunted-roe-deer" ||
+        props.selectedFeatureData.featureType === "district-hunted-boar"
+    ) {
+        return animatedScrollView(<DistrictHuntedAnimalFields huntedAnimal={props.selectedFeatureData} />);
+    }
+
+    if (props.selectedFeatureData.featureType === "district-infrastructures") {
+        return animatedScrollView(<DistrictInfrastructureFields infrastructure={props.selectedFeatureData} />);
     } else {
         const formattedDateTime = formatDateTime(props.selectedFeatureData.properties.reportCreatedOn);
         const observationTypeId = props.selectedFeatureData.properties.observationTypeId;
@@ -55,7 +83,13 @@ export default function SelectedFeatureDetail(props: SelectedFeatureDetailProps)
             <Animated.View style={styles.scroll} entering={FadeInRight} exiting={FadeOutRight}>
                 <ReadOnlyField
                     label={t("reports.coordinates")}
-                    value={props.selectedFeatureData.geometry.coordinates.join(", ") ?? ""}
+                    value={
+                        props.selectedFeatureData.geometry.coordinates
+                            ? `${props.selectedFeatureData.geometry.coordinates[1].toFixed(
+                                  5
+                              )}, ${props.selectedFeatureData.geometry.coordinates[0].toFixed(5)}`
+                            : ""
+                    }
                 />
                 <ReadOnlyField
                     label={

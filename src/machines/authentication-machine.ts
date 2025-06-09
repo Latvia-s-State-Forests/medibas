@@ -2,6 +2,7 @@ import NetInfo from "@react-native-community/netinfo";
 import { useActor, useSelector } from "@xstate/react";
 import * as AuthSession from "expo-auth-session";
 import * as Linking from "expo-linking";
+import { fetch } from "expo/fetch";
 import i18next from "i18next";
 import jwtDecode from "jwt-decode";
 import { createMachine, interpret } from "xstate";
@@ -532,6 +533,7 @@ export const authenticationMachine = createMachine(
                         headers: {
                             Authorization: `Bearer ${context.session.accessToken}`,
                             "X-App-Version": getAppVersion(),
+                            "X-Request-Date": new Date().toUTCString(),
                         },
                     });
                     if (!response.ok) {

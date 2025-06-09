@@ -13,11 +13,10 @@ type MapProps = {
     onMapDragged?: () => void;
     onViewPositionChanged?: (center: GeoJSON.Position, zoom: number | undefined) => void;
     onFeaturesSelected?: (features: SelectedFeature[]) => void;
-    onMarkerSelected?: (position: GeoJSON.Position) => void;
 };
 
 export const Map = React.forwardRef<MapHandle, MapProps>(
-    ({ onLoad, onLoadEnd, onMapDragged, onViewPositionChanged, onFeaturesSelected, onMarkerSelected }, ref) => {
+    ({ onLoad, onLoadEnd, onMapDragged, onViewPositionChanged, onFeaturesSelected }, ref) => {
         const webViewRef = React.useRef<WebView>(null);
         const source = useMapSource();
 
@@ -39,10 +38,6 @@ export const Map = React.forwardRef<MapHandle, MapProps>(
             }
             if (message.type === "FEATURE_SELECTED") {
                 onFeaturesSelected && onFeaturesSelected(message.selected);
-            }
-
-            if (message.type === "MARKER_POSITION") {
-                onMarkerSelected && onMarkerSelected(message.position);
             }
         }
 

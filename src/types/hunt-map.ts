@@ -20,7 +20,6 @@ export type WebMapAction =
           maxZoom: number;
           pinVisible?: boolean;
           alternativePin?: boolean;
-          mapMarker?: boolean;
           features?: Array<"select">;
       }
     | {
@@ -57,11 +56,19 @@ export type WebMapAction =
           type: "deselectFeatures";
       }
     | {
-          type: "getMarkerPosition";
-      }
-    | {
           type: "selectIndividualFeature";
-          feature: Feature & { featureType: "damages" | "observations" | "district-damages" };
+          feature: Feature & {
+              featureType:
+                  | "damages"
+                  | "observations"
+                  | "district-damages"
+                  | "district-hunted-others"
+                  | "district-hunted-red-deer"
+                  | "district-hunted-moose"
+                  | "district-hunted-roe-deer"
+                  | "district-hunted-boar"
+                  | "district-infrastructures";
+          };
       }
     | {
           type: "showFeatures";
@@ -83,8 +90,4 @@ export type WebMapEvent =
     | {
           type: "FEATURE_SELECTED";
           selected: SelectedFeature[];
-      }
-    | {
-          type: "MARKER_POSITION";
-          position: Position;
       };

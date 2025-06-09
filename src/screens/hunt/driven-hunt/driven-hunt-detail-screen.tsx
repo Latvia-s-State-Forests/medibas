@@ -31,7 +31,7 @@ import { generateQRCodeValue } from "~/utils/generate-qr-code";
 import { getQrHuntDescription } from "~/utils/get-qr-hunt-description";
 import { DogPicker } from "../dog-picker/dog-picker";
 import { BeaterManagementUsingActivities } from "./beater-management-using-activities";
-import { DrivenHuntMeetingPlace } from "./driven-hunt-meeting-place";
+import { HuntLocationViewer } from "./hunt-location-viewer";
 import { HunterManagementUsingActivities } from "./hunter-management-using-activities";
 import { JoinDrivenHuntUsingButton } from "./join-driven-hunt/join-driven-hunt-using-button";
 import { BeaterList } from "./lists/beater-list";
@@ -212,7 +212,11 @@ function Content({ hunt }: ContentProps) {
                     ) : null}
                     {hunt.meetingPointY && hunt.meetingPointX ? (
                         <>
-                            <DrivenHuntMeetingPlace latitude={hunt.meetingPointY} longitude={hunt.meetingPointX} />
+                            <HuntLocationViewer
+                                huntType="drivenHunt"
+                                latitude={hunt.meetingPointY}
+                                longitude={hunt.meetingPointX}
+                            />
                             <View
                                 style={hunt.huntEventStatusId !== HuntEventStatus.Concluded ? styles.navigation : null}
                             >

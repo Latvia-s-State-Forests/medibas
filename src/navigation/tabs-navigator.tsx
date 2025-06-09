@@ -1,6 +1,7 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useTranslation } from "react-i18next";
 import { usePendingHuntActivitiesCount } from "~/components/hunt-activities-provider";
+import { usePendingInfrastructureChangesCount } from "~/components/infrastructure-provider";
 import { TabBar, TabBarItem } from "~/components/tab-bar";
 import { useInjuredAnimalPermits } from "~/hooks/use-injured-animal-permits";
 import { usePermissions } from "~/hooks/use-permissions";
@@ -19,7 +20,9 @@ export function TabsNavigator() {
     const injuredAnimalPermits = useInjuredAnimalPermits();
     const injuredAnimalsCount = injuredAnimalPermits.length;
     const pendingHuntActivitiesCount = usePendingHuntActivitiesCount();
-    const badgeCount = injuredAnimalsCount + pendingHuntActivitiesCount;
+    const pendingInfrastructureChangesCount = usePendingInfrastructureChangesCount();
+    const huntBadgeCount = injuredAnimalsCount + pendingHuntActivitiesCount;
+    const mtlBadgeCount = pendingInfrastructureChangesCount;
 
     return (
         <Tabs.Navigator
@@ -64,7 +67,7 @@ export function TabsNavigator() {
                                 onPress={() => {
                                     navigate("HuntScreen");
                                 }}
-                                badgeCount={index === 3 ? undefined : badgeCount}
+                                badgeCount={index === 3 ? undefined : huntBadgeCount}
                             />
                         ) : null}
                         {permissions.viewMtl ? (
@@ -75,6 +78,7 @@ export function TabsNavigator() {
                                 onPress={() => {
                                     navigate("MTLScreen");
                                 }}
+                                badgeCount={index === 4 ? undefined : mtlBadgeCount}
                             />
                         ) : null}
                     </TabBar>

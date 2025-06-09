@@ -1,7 +1,8 @@
 import * as React from "react";
-import { StyleSheet, TouchableOpacity, ViewStyle, StyleProp } from "react-native";
+import { StyleSheet, TouchableOpacity, ViewStyle, StyleProp, View } from "react-native";
 import { IconName, MediumIcon } from "~/components/icon";
 import { Color } from "~/theme";
+import { BorderlessBadge } from "./borderless-badge";
 
 type IconButtonProps = {
     name: IconName<24>;
@@ -9,9 +10,10 @@ type IconButtonProps = {
     disabled?: boolean;
     style?: StyleProp<ViewStyle>;
     color?: Color;
+    badgeCount?: number;
 };
 
-export function IconButton({ name, onPress, disabled, style, color }: IconButtonProps) {
+export function IconButton({ name, onPress, disabled, style, color, badgeCount }: IconButtonProps) {
     return (
         <TouchableOpacity
             onPress={onPress}
@@ -20,6 +22,9 @@ export function IconButton({ name, onPress, disabled, style, color }: IconButton
             style={[styles.container, disabled && styles.disabled, style]}
         >
             <MediumIcon name={name} color={color} />
+            <View style={styles.badge}>
+                {badgeCount ? <BorderlessBadge variant="action-required" count={badgeCount} /> : null}
+            </View>
         </TouchableOpacity>
     );
 }
@@ -27,6 +32,14 @@ export function IconButton({ name, onPress, disabled, style, color }: IconButton
 const styles = StyleSheet.create({
     container: {
         padding: 12,
+        position: "relative",
+    },
+    badge: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        alignItems: "flex-end",
     },
     disabled: {
         opacity: 0.5,

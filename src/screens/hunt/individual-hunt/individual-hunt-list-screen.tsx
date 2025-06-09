@@ -172,20 +172,6 @@ export function IndividualHuntListScreen() {
         return dateFrom !== dateTo ? `${dateFrom} - ${dateTo}` : dateFrom;
     }
 
-    function hasPermissionToViewHunt(hunt: Hunt) {
-        const hunterPersonId = hunt.hunters[0]?.personId;
-        if (!hunterPersonId) {
-            return false;
-        }
-        const huntPlace = hunt.huntEventPlaceId;
-        if (!huntPlace) {
-            return false;
-        }
-        const huntEventStatus = hunt.huntEventStatusId;
-        const districtId = hunt.districts[0]?.id;
-        return permissions.viewIndividualHunt(hunterPersonId, huntEventStatus, huntPlace, districtId);
-    }
-
     return (
         <View style={styles.container}>
             <Header title={t("hunt.individualHunt.hunt")} />
@@ -223,7 +209,6 @@ export function IndividualHuntListScreen() {
                                 <View style={styles.cardContainer}>
                                     {sortHuntsByDate(hunts.active, "asc").map((hunt) => {
                                         const date = formatHuntDate(hunt.plannedFrom, hunt.plannedTo);
-                                        const hasPermissionToViewIndividualHunt = hasPermissionToViewHunt(hunt);
 
                                         return (
                                             <IndividualHuntingCard
@@ -233,7 +218,6 @@ export function IndividualHuntListScreen() {
                                                 status="active"
                                                 title={hunt.title}
                                                 description={hunt.description}
-                                                disabled={!hasPermissionToViewIndividualHunt}
                                                 onPress={() => {
                                                     onNavigateToHuntDetailsScreen({ huntId: hunt.id ?? 0 });
                                                 }}
@@ -253,7 +237,6 @@ export function IndividualHuntListScreen() {
                                     {sortHuntsByDate(hunts.scheduled, "asc").map((hunt) => {
                                         const date = formatHuntDate(hunt.plannedFrom, hunt.plannedTo);
                                         const status = getHuntStatus(hunt);
-                                        const hasPermissionToViewIndividualHunt = hasPermissionToViewHunt(hunt);
 
                                         return (
                                             <IndividualHuntingCard
@@ -261,7 +244,6 @@ export function IndividualHuntListScreen() {
                                                 hunterName={hunt.hunters?.[0]?.fullName ?? ""}
                                                 key={hunt.id}
                                                 status={status}
-                                                disabled={!hasPermissionToViewIndividualHunt}
                                                 title={hunt.title}
                                                 description={hunt.description}
                                                 onPress={() => {
@@ -283,7 +265,6 @@ export function IndividualHuntListScreen() {
                                 <View style={styles.cardContainer}>
                                     {sortHuntsByDate(hunts.concluded, "desc").map((hunt) => {
                                         const date = formatHuntDate(hunt.plannedFrom, hunt.plannedTo);
-                                        const hasPermissionToViewIndividualHunt = hasPermissionToViewHunt(hunt);
 
                                         return (
                                             <IndividualHuntingCard
@@ -292,7 +273,6 @@ export function IndividualHuntListScreen() {
                                                 key={hunt.id}
                                                 title={hunt.title}
                                                 description={hunt.description}
-                                                disabled={!hasPermissionToViewIndividualHunt}
                                                 onPress={() => {
                                                     onNavigateToHuntDetailsScreen({ huntId: hunt.id ?? 0 });
                                                 }}

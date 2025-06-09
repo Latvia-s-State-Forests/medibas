@@ -34,9 +34,9 @@ import { RadioButtonListExampleScreen } from "~/components/radio-button-list.exa
 import { RadioButtonExampleScreen } from "~/components/radio-button.example";
 import { ReadOnlyFieldExampleScreen } from "~/components/read-only-field.example";
 import { RoundIconButtonExampleScreen } from "~/components/round-icon-button.example";
+import { ScrollableSelectionFieldsExampleScreen } from "~/components/scrollable-selection-fields.example";
 import { SegmentedControlExampleScreen } from "~/components/segmented-control.example";
 import { SelectExampleScreen } from "~/components/select.example";
-import { SpeciesFieldExampleScreen } from "~/components/species-field.example";
 import { SpinnerExampleScreen } from "~/components/spinner.example";
 import { SquareIconButtonExampleScreen } from "~/components/square-icon-button.example";
 import { StepperExampleScreen } from "~/components/stepper.example";
@@ -45,7 +45,7 @@ import { TabBarExampleScreen } from "~/components/tab-bar.example";
 import { TagExampleScreen } from "~/components/tag.example";
 import { TypeFieldExampleScreen } from "~/components/type-field.example";
 import { ComponentExamplesListScreen } from "~/screens/component-examples-list-screen";
-import { DrivenHuntMeetingPlaceExampleScreen } from "~/screens/hunt/driven-hunt/driven-hunt-meeting-place.example";
+import { HuntLocationViewerExampleScreen } from "~/screens/hunt/driven-hunt/hunt-location-viewer.example";
 import { MenuListItemExampleScreen } from "~/screens/menu/menu-list-item.example";
 import { ComponentExamplesNavigatorParams } from "~/types/navigation";
 
@@ -69,16 +69,13 @@ export function ComponentExamplesNavigator() {
             <ExamplesStack.Screen name="CurrentPositionExampleScreen" component={CurrentPositionExampleScreen} />
             <ExamplesStack.Screen name="DateTimeInputExampleScreen" component={DateTimeInputExampleScreen} />
             <ExamplesStack.Screen name="DialogExampleScreen" component={DialogExampleScreen} />
-            <ExamplesStack.Screen
-                name="DrivenHuntMeetingPlaceExampleScreen"
-                component={DrivenHuntMeetingPlaceExampleScreen}
-            />
             <ExamplesStack.Screen name="DynamicPickerExampleScreen" component={DynamicPickerExampleScreen} />
             <ExamplesStack.Screen name="EmptyListMessageExampleScreen" component={EmptyListMessageExampleScreen} />
             <ExamplesStack.Screen name="ErrorMessageExampleScreen" component={ErrorMessageExampleScreen} />
             <ExamplesStack.Screen name="FieldLabelExampleScreen" component={FieldLabelExampleScreen} />
             <ExamplesStack.Screen name="HeaderExampleScreen" component={HeaderExampleScreen} />
             <ExamplesStack.Screen name="HuntingCardExampleScreen" component={HuntingCardExampleScreen} />
+            <ExamplesStack.Screen name="HuntLocationViewerExampleScreen" component={HuntLocationViewerExampleScreen} />
             <ExamplesStack.Screen
                 name="IndividualHuntingCardExampleScreen"
                 component={IndividualHuntingCardExampleScreen}
@@ -101,9 +98,12 @@ export function ComponentExamplesNavigator() {
             <ExamplesStack.Screen name="RadioButtonListExampleScreen" component={RadioButtonListExampleScreen} />
             <ExamplesStack.Screen name="ReadOnlyFieldExampleScreen" component={ReadOnlyFieldExampleScreen} />
             <ExamplesStack.Screen name="RoundIconButtonExampleScreen" component={RoundIconButtonExampleScreen} />
+            <ExamplesStack.Screen
+                name="ScrollableSelectionFieldsExampleScreen"
+                component={ScrollableSelectionFieldsExampleScreen}
+            />
             <ExamplesStack.Screen name="SegmentedControlExampleScreen" component={SegmentedControlExampleScreen} />
             <ExamplesStack.Screen name="SelectExampleScreen" component={SelectExampleScreen} />
-            <ExamplesStack.Screen name="SpeciesFieldExampleScreen" component={SpeciesFieldExampleScreen} />
             <ExamplesStack.Screen name="SpinnerExampleScreen" component={SpinnerExampleScreen} />
             <ExamplesStack.Screen name="SquareIconButtonExampleScreen" component={SquareIconButtonExampleScreen} />
             <ExamplesStack.Screen name="StepperExampleScreen" component={StepperExampleScreen} />

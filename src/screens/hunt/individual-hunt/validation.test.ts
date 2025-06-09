@@ -4,6 +4,7 @@ import { getSubmitIndividualHuntValidationErrors } from "./validation";
 
 const submitDrivenHunt: IndividualHuntFormState & { huntPlace: HuntPlace; hasEquipment: boolean } = {
     district: 1,
+    selectedPosition: [56.936432971683445, 27.345833969824536],
     notes: "Some notes",
     equipment: [],
     propertyName: "Some property",
@@ -55,6 +56,14 @@ describe("getSubmitIndividualHuntValidationErrors", () => {
             plannedToDate: undefined,
         });
         expect(errors).toEqual(['"Medību beigu datums" ir obligāti aizpildāms lauks']);
+    });
+
+    it("if selected position is empty return an error", () => {
+        const errors = getSubmitIndividualHuntValidationErrors({
+            ...submitDrivenHunt,
+            selectedPosition: null,
+        });
+        expect(errors).toEqual(['"Plānotā medību vieta" ir obligāti aizpildāms lauks']);
     });
 
     it("if hunt place is not WaterBody and special equipment is not selected and selectedSpeciesList is empty return error", () => {

@@ -14,9 +14,12 @@ type HeaderProps = {
     showBackButton?: boolean;
     onBackButtonPress?: () => void;
     showCloseButton?: boolean;
+    onCloseButtonPress?: () => void;
     showEditButton?: boolean;
     onEditButtonPress?: () => void;
-    onCloseButtonPress?: () => void;
+    showRegisterButton?: boolean;
+    onRegisterButtonPress?: () => void;
+    registerButtonBadgeCount?: number;
     showTopInset?: boolean;
 };
 
@@ -25,7 +28,15 @@ export function Header(props: HeaderProps) {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
 
-    const { title, showBackButton = true, showCloseButton, showEditButton, showTopInset = true } = props;
+    const {
+        title,
+        showBackButton = true,
+        showCloseButton,
+        showEditButton,
+        showRegisterButton,
+        showTopInset = true,
+        registerButtonBadgeCount,
+    } = props;
 
     const [isPressed, setIsPressed] = React.useState(false);
 
@@ -49,6 +60,13 @@ export function Header(props: HeaderProps) {
             return;
         }
         props.onEditButtonPress();
+    }
+
+    function onRegisterButtonPress() {
+        if (!props.onRegisterButtonPress) {
+            return;
+        }
+        props.onRegisterButtonPress();
     }
 
     return (
@@ -93,12 +111,23 @@ export function Header(props: HeaderProps) {
                 ) : (
                     <Spacer horizontal size={showCloseButton ? 6 : 20} />
                 )}
-                {showCloseButton && (
+                {showCloseButton ? (
                     <>
                         <IconButton onPress={onCloseButtonPress} color="white" name="close" />
                         <Spacer horizontal size={8} />
                     </>
-                )}
+                ) : null}
+                {showRegisterButton ? (
+                    <>
+                        <IconButton
+                            onPress={onRegisterButtonPress}
+                            color="white"
+                            name="register"
+                            badgeCount={registerButtonBadgeCount}
+                        />
+                        <Spacer horizontal size={8} />
+                    </>
+                ) : null}
             </View>
         </View>
     );

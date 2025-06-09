@@ -1,13 +1,16 @@
 import { MMKV } from "react-native-mmkv";
 import { logger } from "~/logger";
 import { Classifiers, classifiersSchema } from "./types/classifiers";
+import { Config } from "./types/config";
 import { Contract } from "./types/contracts";
 import { DistrictDamagesPerDistrictId } from "./types/district-damages";
 import { District } from "./types/districts";
 import { Features } from "./types/features";
 import { FormState } from "./types/form-state";
 import { HuntActivity } from "./types/hunt-activities";
+import { HuntedAnimal } from "./types/hunted-animals";
 import { Hunt } from "./types/hunts";
+import { Infrastructure, InfrastructureChange } from "./types/infrastructure";
 import { Membership } from "./types/mtl";
 import { NewsItem } from "./types/news";
 import { PushNotificationsToken, pushNotificationsTokenSchema } from "./types/notifications";
@@ -18,12 +21,15 @@ import { Report } from "./types/report";
 const keys = {
     classifiers: "Classifiers",
     contracts: "Contracts",
+    config: "Config",
     districtDamagesPerDistrictId: "DistrictDamagesPerDistrictId",
     districts: "Districts",
     features: "Features",
     formState: "FormState",
     huntActivities: "HuntActivities",
     hunts: "Hunts",
+    infrastructure: "Infrastructure",
+    infrastructureChanges: "InfrastructureChanges",
     latestHuntFetchDate: "LatestHuntFetchDate",
     latestSeenDate: "LatestSeenDate",
     memberships: "Memberships",
@@ -35,6 +41,7 @@ const keys = {
     pushNotificationsToken: "PushNotificationsToken",
     reports: "Reports",
     selectedDistrictId: "SelectedDistrictId",
+    huntedAnimals: "HuntedAnimals",
 } as const;
 
 export class UserStorage {
@@ -75,6 +82,20 @@ export class UserStorage {
 
     public setContracts(contracts: Contract[]) {
         this.storage.set(keys.contracts, JSON.stringify(contracts));
+    }
+
+    public getConfig(): Config | undefined {
+        const config = this.storage.getString(keys.config);
+
+        if (config) {
+            return JSON.parse(config);
+        }
+
+        return undefined;
+    }
+
+    public setConfig(config: Config) {
+        this.storage.set(keys.config, JSON.stringify(config));
     }
 
     public getDistrictDamagesPerDistrictId(): DistrictDamagesPerDistrictId | undefined {
@@ -320,5 +341,51 @@ export class UserStorage {
 
     public deletePushNotificationsToken() {
         this.storage.delete(keys.pushNotificationsToken);
+    }
+
+    public getInfrastructure(): { infrastructure: Infrastructure[]; fetched: string } | undefined {
+        const infrastructure = this.storage.getString(keys.infrastructure);
+
+        if (infrastructure) {
+            return JSON.parse(infrastructure);
+        }
+
+        return undefined;
+    }
+
+    public setInfrastructure(infrastructure: Infrastructure[], fetched: string) {
+        this.storage.set(keys.infrastructure, JSON.stringify({ infrastructure, fetched }));
+    }
+
+    public getHuntedAnimals(): HuntedAnimal[] | undefined {
+        const huntedAnimals = this.storage.getString(keys.huntedAnimals);
+
+        if (huntedAnimals) {
+            return JSON.parse(huntedAnimals);
+        }
+
+        return undefined;
+    }
+
+    public setHuntedAnimals(huntedAnimals: HuntedAnimal[]) {
+        this.storage.set(keys.huntedAnimals, JSON.stringify(huntedAnimals));
+    }
+
+    public getInfrastructureChanges(): InfrastructureChange[] | undefined {
+        const infrastructureChanges = this.storage.getString(keys.infrastructureChanges);
+
+        if (infrastructureChanges) {
+            return JSON.parse(infrastructureChanges);
+        }
+
+        return undefined;
+    }
+
+    public setInfrastructureChanges(infrastructureChanges: InfrastructureChange[]) {
+        this.storage.set(keys.infrastructureChanges, JSON.stringify(infrastructureChanges));
+    }
+
+    public deleteInfrastructureChanges() {
+        this.storage.delete(keys.infrastructureChanges);
     }
 }

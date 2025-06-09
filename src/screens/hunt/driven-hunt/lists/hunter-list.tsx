@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { usePermissions } from "~/hooks/use-permissions";
 import { Hunt, HuntEventStatus } from "~/types/hunts";
+import { getHunters } from "~/utils/get-hunters";
 import { List } from "./list";
 
 type HunterListProps = {
@@ -16,25 +17,7 @@ export function HunterList({ hunt }: HunterListProps) {
     const isHuntConcluded = hunt.huntEventStatusId === HuntEventStatus.Concluded;
     const showHunterCardNumbers = hasPermissionToManageDrivenHunt && !isHuntConcluded;
 
-    const hunters = React.useMemo(() => {
-        const hunters: string[] = [];
-
-        for (const hunter of hunt.hunters) {
-            hunters.push(showHunterCardNumbers ? hunter.fullName + " " + hunter.huntersCardNumber : hunter.fullName);
-        }
-
-        for (const guestHunter of hunt.guestHunters) {
-            hunters.push(
-                showHunterCardNumbers
-                    ? guestHunter.fullName + " " + guestHunter.guestHuntersCardNumber
-                    : guestHunter.fullName
-            );
-        }
-
-        hunters.sort((a, b) => a.localeCompare(b));
-
-        return hunters;
-    }, [hunt.hunters, hunt.guestHunters, showHunterCardNumbers]);
+    const hunters = React.useMemo(() => getHunters(hunt, showHunterCardNumbers), [hunt, showHunterCardNumbers]);
 
     if (hunters.length > 0) {
         return (

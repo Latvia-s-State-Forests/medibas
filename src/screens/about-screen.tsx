@@ -11,7 +11,7 @@ import { PressableListItem } from "~/components/list/pressable-list-item";
 import { Spacer } from "~/components/spacer";
 import { Text } from "~/components/text";
 import { configuration } from "~/configuration";
-import { fileLoggerTransport, logger } from "~/logger";
+import { logger } from "~/logger";
 import { theme } from "~/theme";
 import { getAppVersion } from "~/utils/get-app-version";
 
@@ -20,6 +20,7 @@ export function AboutScreen() {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
     const [isVisible, setIsVisible] = React.useState(false);
+    const [isShareLogsInProgress, setIsShareLogsInProgress] = React.useState(false);
 
     function onModalClose() {
         setIsVisible(false);
@@ -40,7 +41,7 @@ export function AboutScreen() {
     }
 
     function onContactUsPress() {
-        Linking.openURL("mailto://" + configuration.support.supportEmail);
+        Linking.openURL("mailto:" + configuration.support.supportEmail);
     }
 
     function onLicensesPress() {
@@ -48,10 +49,16 @@ export function AboutScreen() {
     }
 
     function onShareLogsPress() {
-        fileLoggerTransport.share().catch((error) => {
-            logger.error("Failed to share logs", error);
-            setIsVisible(true);
-        });
+        setIsShareLogsInProgress(true);
+        logger
+            .share()
+            .catch((error) => {
+                logger.error("Failed to share logs", error);
+                setIsVisible(true);
+            })
+            .finally(() => {
+                setIsShareLogsInProgress(false);
+            });
     }
 
     const version = getAppVersion();
@@ -93,6 +100,7 @@ export function AboutScreen() {
                             background="white"
                             onPress={onShareLogsPress}
                             label={t("about.debugInfo.title")}
+                            disabled={isShareLogsInProgress}
                         />
                     </View>
                     <Spacer size={24} />

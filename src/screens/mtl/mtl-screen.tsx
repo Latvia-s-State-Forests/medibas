@@ -3,6 +3,7 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { InteractionManager, StyleSheet, View } from "react-native";
 import { CardButton } from "~/components/card-button";
+import { usePendingInfrastructureChangesCount } from "~/components/infrastructure-provider";
 import { ScreenBackgroundLayout } from "~/components/screen-background-layout";
 import { Select } from "~/components/select";
 import { SettingsButton } from "~/components/settings-button";
@@ -19,6 +20,7 @@ export function MTLScreen() {
     const [selectedDistrictId, setSelectedDistrictId] = useSelectedDistrictId();
     const { t } = useTranslation();
     const permissions = usePermissions();
+    const pendingInfrastructureChangesCount = usePendingInfrastructureChangesCount();
 
     useFocusEffect(
         React.useCallback(() => {
@@ -29,7 +31,8 @@ export function MTLScreen() {
         }, [])
     );
 
-    const viewMemberManagement = permissions.viewMemberManagement;
+    const hasPermissionToViewMemberManagement = permissions.viewMemberManagement;
+    const hasPermissionToViewInfrastructures = permissions.viewInfrastructures;
 
     return (
         <ScreenBackgroundLayout style={styles.container}>
@@ -50,7 +53,7 @@ export function MTLScreen() {
                 </View>
             </View>
             <View style={styles.mainCardContainer}>
-                <View style={styles.topCards}>
+                <View style={styles.cards}>
                     <CardButton
                         radius="small"
                         active={false}
@@ -61,12 +64,11 @@ export function MTLScreen() {
                     />
                     {permissions.viewDistrictDamages ? (
                         <>
-                            <Spacer horizontal size={8} />
                             <CardButton
                                 radius="small"
                                 active={false}
                                 onPress={() => {
-                                    if (viewMemberManagement) {
+                                    if (hasPermissionToViewMemberManagement) {
                                         navigation.navigate("MemberManagementScreen");
                                     } else if (selectedDistrictId) {
                                         navigation.navigate("DistrictDamagesListScreen", {
@@ -75,24 +77,52 @@ export function MTLScreen() {
                                     }
                                 }}
                                 style={styles.cardButton}
-                                label={viewMemberManagement ? t("mtl.memberManagement") : t("damage.inDistrict")}
-                                iconName={viewMemberManagement ? "members" : "forest"}
+                                label={
+                                    hasPermissionToViewMemberManagement
+                                        ? t("mtl.memberManagement")
+                                        : t("damage.inDistrict")
+                                }
+                                iconName={hasPermissionToViewMemberManagement ? "members" : "forest"}
                             />
                         </>
                     ) : null}
                 </View>
-                {viewMemberManagement ? (
-                    <CardButton
-                        radius="small"
-                        active={false}
-                        onPress={() => {
-                            if (selectedDistrictId) {
-                                navigation.navigate("DistrictDamagesListScreen", { districtId: selectedDistrictId });
-                            }
-                        }}
-                        label={t("damage.inDistrict")}
-                        iconName="forest"
-                    />
+                {hasPermissionToViewInfrastructures || hasPermissionToViewMemberManagement ? (
+                    <View style={styles.cards}>
+                        {hasPermissionToViewMemberManagement ? (
+                            <CardButton
+                                style={styles.cardButton}
+                                radius="small"
+                                active={false}
+                                onPress={() => {
+                                    if (selectedDistrictId) {
+                                        navigation.navigate("DistrictDamagesListScreen", {
+                                            districtId: selectedDistrictId,
+                                        });
+                                    }
+                                }}
+                                label={t("damage.inDistrict")}
+                                iconName="forest"
+                            />
+                        ) : null}
+                        {hasPermissionToViewInfrastructures ? (
+                            <CardButton
+                                style={styles.cardButton}
+                                radius="small"
+                                active={false}
+                                onPress={() => {
+                                    if (selectedDistrictId) {
+                                        navigation.navigate("DistrictInfrastructureListScreen", {
+                                            districtId: selectedDistrictId,
+                                        });
+                                    }
+                                }}
+                                label={t("mtl.infrastructure.districtInfrastructure")}
+                                iconName="infrastructure"
+                                badgeCount={pendingInfrastructureChangesCount}
+                            />
+                        ) : null}
+                    </View>
                 ) : null}
             </View>
         </ScreenBackgroundLayout>
@@ -112,13 +142,14 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     mainCardContainer: {
-        gap: 8,
+        gap: 10,
         padding: 8,
         borderRadius: 8,
         backgroundColor: theme.color.white,
     },
-    topCards: {
+    cards: {
         flexDirection: "row",
+        gap: 10,
     },
     cardButton: {
         flex: 1,

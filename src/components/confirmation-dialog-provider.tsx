@@ -6,6 +6,7 @@ import { Dialog } from "./dialog";
 type ConfirmationDialogOptions = {
     title: string;
     confirmButtonTitle?: string;
+    confirmButtonVariant?: "primary" | "danger";
     rejectButtonTitle?: string;
 };
 
@@ -18,12 +19,14 @@ const ConfirmationDialogContext = React.createContext<ConfirmationDialogContextV
 export function ConfirmationDialogProvider({ children }: { children: React.ReactNode }) {
     const { t } = useTranslation();
     const defaultConfirmButtonText = t("modal.accept");
+    const defaultConfirmButtonVariant = "primary";
     const defaultRejectButtonText = t("modal.cancel");
 
     const [state, setState] = React.useState<{
         visible: boolean;
         title: string;
         confirmButtonText: string;
+        confirmButtonVariant: "primary" | "danger";
         rejectButtonText: string;
         onConfirm: () => void;
         onReject: () => void;
@@ -31,6 +34,7 @@ export function ConfirmationDialogProvider({ children }: { children: React.React
         visible: false,
         title: "",
         confirmButtonText: defaultConfirmButtonText,
+        confirmButtonVariant: defaultConfirmButtonVariant,
         rejectButtonText: defaultRejectButtonText,
         onConfirm: ignore,
         onReject: ignore,
@@ -51,6 +55,7 @@ export function ConfirmationDialogProvider({ children }: { children: React.React
                 visible: true,
                 title: options.title,
                 confirmButtonText: options.confirmButtonTitle ?? defaultConfirmButtonText,
+                confirmButtonVariant: options.confirmButtonVariant ?? defaultConfirmButtonVariant,
                 rejectButtonText: options.rejectButtonTitle ?? defaultRejectButtonText,
                 onConfirm: () => {
                     resolve(true);
@@ -74,7 +79,11 @@ export function ConfirmationDialogProvider({ children }: { children: React.React
                 onBackButtonPress={state.onReject}
                 buttons={
                     <>
-                        <Button title={state.confirmButtonText} onPress={state.onConfirm} />
+                        <Button
+                            title={state.confirmButtonText}
+                            onPress={state.onConfirm}
+                            variant={state.confirmButtonVariant}
+                        />
                         <Button variant="secondary-outlined" title={state.rejectButtonText} onPress={state.onReject} />
                     </>
                 }

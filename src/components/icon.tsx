@@ -65,16 +65,21 @@ import User from "~/assets/icons/24/user.svg";
 import Vest from "~/assets/icons/24/vest.svg";
 import Animals from "~/assets/icons/32/animals.svg";
 import Badger from "~/assets/icons/32/badger.svg";
+import Bear from "~/assets/icons/32/bear.svg";
 import Beaver from "~/assets/icons/32/beaver.svg";
 import BinocularsLarge from "~/assets/icons/32/binoculars.svg";
 import Birds from "~/assets/icons/32/birds.svg";
 import BlackGrouse from "~/assets/icons/32/black-grouse.svg";
 import Boar from "~/assets/icons/32/boar.svg";
+import Bridge from "~/assets/icons/32/bridge.svg";
 import Cropping from "~/assets/icons/32/cropping.svg";
 import DamageLarge from "~/assets/icons/32/damage.svg";
 import DeadAnimals from "~/assets/icons/32/dead-animals.svg";
 import Deer from "~/assets/icons/32/deer.svg";
+import Feeder from "~/assets/icons/32/feeder.svg";
+import FeedingField from "~/assets/icons/32/feeding-field.svg";
 import Ferret from "~/assets/icons/32/ferret.svg";
+import FootBridge from "~/assets/icons/32/footbridge.svg";
 import Forest from "~/assets/icons/32/forest.svg";
 import Fox from "~/assets/icons/32/fox.svg";
 import Hare from "~/assets/icons/32/hare.svg";
@@ -96,6 +101,8 @@ import Rackelhahn from "~/assets/icons/32/rackelhahn.svg";
 import Racoon from "~/assets/icons/32/racoon.svg";
 import RegisterLarge from "~/assets/icons/32/register.svg";
 import Roe from "~/assets/icons/32/roe.svg";
+import Salt from "~/assets/icons/32/salt.svg";
+import ShootingLane from "~/assets/icons/32/shooting-lane.svg";
 import SignsOfPresence from "~/assets/icons/32/signs-of-presence.svg";
 import Statistics from "~/assets/icons/32/statistics.svg";
 import Tag from "~/assets/icons/32/tag.svg";
@@ -186,15 +193,20 @@ export const icons = {
         animals: Animals,
         badger: Badger,
         beaver: Beaver,
+        bear: Bear,
         binoculars: BinocularsLarge,
         birds: Birds,
         blackGrouse: BlackGrouse,
+        bridge: Bridge,
         boar: Boar,
         cropping: Cropping,
         damage: DamageLarge,
         deadAnimals: DeadAnimals,
         deer: Deer,
+        feeder: Feeder,
+        feedingField: FeedingField,
         ferret: Ferret,
+        footBridge: FootBridge,
         forest: Forest,
         fox: Fox,
         hare: Hare,
@@ -216,6 +228,8 @@ export const icons = {
         racoon: Racoon,
         register: RegisterLarge,
         roe: Roe,
+        salt: Salt,
+        shootingLane: ShootingLane,
         signsOfPresence: SignsOfPresence,
         statistics: Statistics,
         tag: Tag,

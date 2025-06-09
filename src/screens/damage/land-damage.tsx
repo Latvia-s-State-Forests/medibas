@@ -39,7 +39,7 @@ export function LandDamage(props: LandDamageProps) {
         if (props.damage.type === Number(type)) {
             return;
         }
-        onChange({ type: Number(type), species: undefined });
+        onChange({ type: Number(type), subtype: undefined, species: undefined });
     }
 
     function onSubtypeChange(subtype: string) {

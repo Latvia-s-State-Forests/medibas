@@ -1,8 +1,8 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
+import { ScrollableSelectionFields } from "~/components/scrollable-selection-fields";
 import { Select } from "~/components/select";
 import { Spacer } from "~/components/spacer";
-import { SpeciesField } from "~/components/species-field";
 import { configuration } from "~/configuration";
 import { useClassifiers } from "~/hooks/use-classifiers";
 import { getAppLanguage } from "~/i18n";
@@ -42,7 +42,7 @@ export function ObservationsSpecies(props: ObservationsSpeciesProps) {
     return (
         <>
             <Spacer size={24} />
-            <SpeciesField
+            <ScrollableSelectionFields
                 label={t("observations.speciesMainGroup")}
                 options={speciesClassifiers.map((classifier) => ({
                     label: formatLabel(classifier.description),

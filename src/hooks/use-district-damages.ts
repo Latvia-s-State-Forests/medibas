@@ -27,7 +27,7 @@ export function useAllDistrictDamages() {
                     type: "Feature",
                     geometry: { type: "Point", coordinates: [entry.locationX, entry.locationY] },
                     properties: {
-                        featureId: entry.id,
+                        id: entry.id,
                         damageTypeId: entry.damageTypeId,
                     },
                 })

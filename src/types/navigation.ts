@@ -3,6 +3,7 @@ import { LimitedPreyState, LimitedSpecies, UnlimitedPreyState } from "~/types/hu
 import { DamageState } from "./damage";
 import { DistrictDamage } from "./district-damages";
 import { Hunt, Hunter } from "./hunts";
+import { Infrastructure } from "./infrastructure";
 import { Member } from "./mtl";
 import { ObservationsState } from "./observations";
 import { Permit } from "./permits";
@@ -13,6 +14,10 @@ export type RootNavigatorParams = {
     ComponentExamplesNavigator: NavigatorScreenParams<ComponentExamplesNavigatorParams>;
     DistrictDamagesDetailScreen: { detail: DistrictDamage };
     DistrictDamagesListScreen: { districtId: number };
+    DistrictInfrastructureChangesListScreen: undefined;
+    DistrictInfrastructureDetailScreen: { detail: Infrastructure; title: string };
+    DistrictInfrastructureFormScreen: { infrastructureToEdit?: Infrastructure; currentDistrictId: number };
+    DistrictInfrastructureListScreen: { districtId: number };
     DrivenHuntDetailScreen: { huntId: number };
     DrivenHuntFormScreen: { huntToEdit?: Hunt; huntToCopy?: Hunt };
     DrivenHuntListScreen: undefined;
@@ -78,13 +83,13 @@ export type ComponentExamplesNavigatorParams = {
     CurrentPositionExampleScreen: undefined;
     DateTimeInputExampleScreen: undefined;
     DialogExampleScreen: undefined;
-    DrivenHuntMeetingPlaceExampleScreen: undefined;
     DynamicPickerExampleScreen: undefined;
     EmptyListMessageExampleScreen: undefined;
     ErrorMessageExampleScreen: undefined;
     FieldLabelExampleScreen: undefined;
     HeaderExampleScreen: undefined;
     HuntingCardExampleScreen: undefined;
+    HuntLocationViewerExampleScreen: undefined;
     IconButtonExampleScreen: undefined;
     IconExampleScreen: undefined;
     ImageButtonExampleScreen: undefined;
@@ -105,9 +110,9 @@ export type ComponentExamplesNavigatorParams = {
     RadioButtonListExampleScreen: undefined;
     ReadOnlyFieldExampleScreen: undefined;
     RoundIconButtonExampleScreen: undefined;
+    ScrollableSelectionFieldsExampleScreen: undefined;
     SegmentedControlExampleScreen: undefined;
     SelectExampleScreen: undefined;
-    SpeciesFieldExampleScreen: undefined;
     SpinnerExampleScreen: undefined;
     SquareIconButtonExampleScreen: undefined;
     StepperExampleScreen: undefined;

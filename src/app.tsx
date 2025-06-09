@@ -17,9 +17,12 @@ import { api } from "./api";
 import { appStorage } from "./app-storage";
 import { ConfirmationDialogProvider } from "./components/confirmation-dialog-provider";
 import { HuntActivitiesProvider } from "./components/hunt-activities-provider";
+import { InfrastructureProvider } from "./components/infrastructure-provider";
 import { ReportsProvider } from "./components/reports-provider";
 import { ClassifiersContext } from "./hooks/use-classifiers";
 import { useClassifiersQuery } from "./hooks/use-classifiers-query";
+import { ConfigContext } from "./hooks/use-config";
+import { useConfigQuery } from "./hooks/use-config-query";
 import { ContractsContext } from "./hooks/use-contracts";
 import { useContractsQuery } from "./hooks/use-contracts-query";
 import { DistrictDamagesContext } from "./hooks/use-district-damages";
@@ -28,8 +31,11 @@ import { DistrictsContext } from "./hooks/use-districts";
 import { useDistrictsQuery } from "./hooks/use-districts-query";
 import { FeaturesContext } from "./hooks/use-features";
 import { useFeaturesQuery } from "./hooks/use-features-query";
+import { HuntedAnimalsContext } from "./hooks/use-hunted-animals";
+import { useHuntedAnimalsQuery } from "./hooks/use-hunted-animals-query";
 import { HuntsProvider } from "./hooks/use-hunts";
 import { useHuntsQuery } from "./hooks/use-hunts-query";
+import { useInfrastructureQuery } from "./hooks/use-infrastructure-query";
 import { useInitialNavigationState } from "./hooks/use-initial-navigation-state";
 import { MembershipsContext } from "./hooks/use-memberships";
 import { useMembershipsQuery } from "./hooks/use-memberships-query";
@@ -277,6 +283,7 @@ export default function App() {
 
 function AuthenticatedApp() {
     const profileQuery = useProfileQuery();
+    const configQuery = useConfigQuery();
     const classifiersQuery = useClassifiersQuery();
     const featuresQuery = useFeaturesQuery();
 
@@ -288,6 +295,8 @@ function AuthenticatedApp() {
     const permitsQuery = usePermitsQuery(isVmdAccountConnected);
     const districtDamagesQuery = useDistrictDamagesQuery(isVmdAccountConnected);
     const huntsQuery = useHuntsQuery(isVmdAccountConnected);
+    const infrastructureQuery = useInfrastructureQuery(isVmdAccountConnected);
+    const huntedAnimalsQuery = useHuntedAnimalsQuery(isVmdAccountConnected);
 
     const species = useSpecies(classifiersQuery.data);
 
@@ -295,6 +304,7 @@ function AuthenticatedApp() {
 
     if (
         initialNavigationState.status !== "loaded" ||
+        configQuery.isLoading ||
         classifiersQuery.isLoading ||
         featuresQuery.isLoading ||
         profileQuery.isLoading ||
@@ -312,6 +322,8 @@ function AuthenticatedApp() {
     }
 
     if (
+        configQuery.isLoadingError ||
+        !configQuery.data ||
         classifiersQuery.isLoadingError ||
         !classifiersQuery.data ||
         featuresQuery.isLoadingError ||
@@ -336,6 +348,9 @@ function AuthenticatedApp() {
         return (
             <InitialLoadingFailedScreen
                 onRetry={() => {
+                    if (configQuery.status === "error") {
+                        configQuery.refetch();
+                    }
                     if (profileQuery.status === "error") {
                         profileQuery.refetch();
                     }
@@ -371,39 +386,53 @@ function AuthenticatedApp() {
     return (
         <NewsProvider>
             <HuntActivitiesProvider>
-                <ProfileContext.Provider value={profileQuery.data}>
-                    <ClassifiersContext.Provider value={classifiersQuery.data}>
-                        <FeaturesContext.Provider value={featuresQuery.data}>
-                            <DistrictsContext.Provider value={districtsQuery.data ?? []}>
-                                <ContractsContext.Provider value={contractsQuery.data ?? []}>
-                                    <MembershipsContext.Provider value={memberships.data ?? []}>
-                                        <PermitsContext.Provider value={permitsQuery.data ?? []}>
-                                            <DistrictDamagesContext.Provider value={districtDamagesQuery.data ?? {}}>
-                                                <HuntsProvider hunts={huntsQuery.data ?? []}>
-                                                    <SpeciesContext.Provider value={species}>
-                                                        <SelectedDistrictIdProvider>
-                                                            <MapSettingsProvider>
-                                                                <ReportsProvider>
-                                                                    <NavigationContainer
-                                                                        initialState={initialNavigationState.state}
-                                                                    >
-                                                                        <ConfirmationDialogProvider>
-                                                                            <RootNavigator />
-                                                                        </ConfirmationDialogProvider>
-                                                                    </NavigationContainer>
-                                                                </ReportsProvider>
-                                                            </MapSettingsProvider>
-                                                        </SelectedDistrictIdProvider>
-                                                    </SpeciesContext.Provider>
-                                                </HuntsProvider>
-                                            </DistrictDamagesContext.Provider>
-                                        </PermitsContext.Provider>
-                                    </MembershipsContext.Provider>
-                                </ContractsContext.Provider>
-                            </DistrictsContext.Provider>
-                        </FeaturesContext.Provider>
-                    </ClassifiersContext.Provider>
-                </ProfileContext.Provider>
+                <ConfigContext.Provider value={configQuery.data}>
+                    <ProfileContext.Provider value={profileQuery.data}>
+                        <ClassifiersContext.Provider value={classifiersQuery.data}>
+                            <FeaturesContext.Provider value={featuresQuery.data}>
+                                <DistrictsContext.Provider value={districtsQuery.data ?? []}>
+                                    <ContractsContext.Provider value={contractsQuery.data ?? []}>
+                                        <MembershipsContext.Provider value={memberships.data ?? []}>
+                                            <PermitsContext.Provider value={permitsQuery.data ?? []}>
+                                                <DistrictDamagesContext.Provider
+                                                    value={districtDamagesQuery.data ?? {}}
+                                                >
+                                                    <HuntsProvider hunts={huntsQuery.data ?? []}>
+                                                        <SpeciesContext.Provider value={species}>
+                                                            <InfrastructureProvider
+                                                                queryData={infrastructureQuery.data}
+                                                            >
+                                                                <HuntedAnimalsContext.Provider
+                                                                    value={huntedAnimalsQuery.data ?? []}
+                                                                >
+                                                                    <SelectedDistrictIdProvider>
+                                                                        <MapSettingsProvider>
+                                                                            <ReportsProvider>
+                                                                                <NavigationContainer
+                                                                                    initialState={
+                                                                                        initialNavigationState.state
+                                                                                    }
+                                                                                >
+                                                                                    <ConfirmationDialogProvider>
+                                                                                        <RootNavigator />
+                                                                                    </ConfirmationDialogProvider>
+                                                                                </NavigationContainer>
+                                                                            </ReportsProvider>
+                                                                        </MapSettingsProvider>
+                                                                    </SelectedDistrictIdProvider>
+                                                                </HuntedAnimalsContext.Provider>
+                                                            </InfrastructureProvider>
+                                                        </SpeciesContext.Provider>
+                                                    </HuntsProvider>
+                                                </DistrictDamagesContext.Provider>
+                                            </PermitsContext.Provider>
+                                        </MembershipsContext.Provider>
+                                    </ContractsContext.Provider>
+                                </DistrictsContext.Provider>
+                            </FeaturesContext.Provider>
+                        </ClassifiersContext.Provider>
+                    </ProfileContext.Provider>
+                </ConfigContext.Provider>
             </HuntActivitiesProvider>
         </NewsProvider>
     );

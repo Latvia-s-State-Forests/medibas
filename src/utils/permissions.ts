@@ -1,8 +1,19 @@
 import { HunterCardTypeId } from "~/types/classifiers";
-import { Hunters, HuntEventStatus, HuntPlace } from "~/types/hunts";
+import { Hunters } from "~/types/hunts";
 import { MemberRole, Membership } from "~/types/mtl";
 import { Profile } from "~/types/profile";
 import { getValidHunterCardNumber } from "./profile";
+
+function hasAdministratorOrTrusteePermissionInDistrict(profile: Profile, districtId: number | undefined): boolean {
+    if (districtId === undefined) {
+        return false;
+    }
+
+    return profile.memberships.some(
+        (membership) =>
+            membership.huntingDistrictId === districtId && (membership.isAdministrator || membership.isTrustee)
+    );
+}
 
 export function hasPermissionToViewDistrictOnMap(profile: Profile, districtId: number | undefined): boolean {
     if (districtId === undefined) {
@@ -15,11 +26,33 @@ export function hasPermissionToViewDistrictOnMap(profile: Profile, districtId: n
 export function hasPermissionToViewHunt(profile: Profile): boolean {
     const validHunterCardNumber = getValidHunterCardNumber(profile, HunterCardTypeId.Hunter);
     const validSeasonCardNumber = getValidHunterCardNumber(profile, HunterCardTypeId.Season);
-    return validHunterCardNumber !== undefined && validSeasonCardNumber !== undefined;
+
+    return (
+        (validHunterCardNumber !== undefined && validSeasonCardNumber !== undefined) ||
+        (profile.memberships?.some((membership) => membership.isAdministrator || membership.isTrustee) ?? false)
+    );
+}
+
+export function hasPermissionToViewHuntedAnimalsOnMap(profile: Profile, districtId: number | undefined): boolean {
+    if (districtId === undefined) {
+        return false;
+    }
+
+    return profile.memberships.some(
+        (membership) =>
+            membership.huntingDistrictId === districtId &&
+            (membership.isHunter || membership.isTrustee || membership.isAdministrator)
+    );
 }
 
 export function hasPermissionToViewMtl(profile: Profile): boolean {
     return profile.memberships.length > 0;
+}
+
+export function hasPermissionToRegisterHunt(profile: Profile): boolean {
+    const validHunterCardNumber = getValidHunterCardNumber(profile, HunterCardTypeId.Hunter);
+    const validSeasonCardNumber = getValidHunterCardNumber(profile, HunterCardTypeId.Season);
+    return validHunterCardNumber !== undefined && validSeasonCardNumber !== undefined;
 }
 
 export function hasPermissionToCreateDistrictHuntReports(profile: Profile, districtId: number | undefined): boolean {
@@ -35,6 +68,27 @@ export function hasPermissionToViewMemberManagement(profile: Profile): boolean {
 
 export function hasPermissionToViewDistrictDamages(profile: Profile) {
     return profile.memberships.length > 0;
+}
+
+function hasInfrastructureRole(profile: Profile): boolean {
+    return profile.memberships.some(
+        (membership) => membership.isTrustee || membership.isAdministrator || membership.isHunter
+    );
+}
+
+export function hasPermissionToViewInfrastructures(profile: Profile): boolean {
+    return hasInfrastructureRole(profile);
+}
+
+export function hasPermissionToViewInfrastructuresLayer(profile: Profile, districtId: number | undefined): boolean {
+    if (districtId === undefined) {
+        return false;
+    }
+    return profile.memberships.some(
+        (membership) =>
+            membership.huntingDistrictId === districtId &&
+            (membership.isTrustee || membership.isAdministrator || membership.isHunter)
+    );
 }
 
 export function hasPermissionToCreateDrivenHunt(profile: Profile): boolean {
@@ -60,6 +114,10 @@ export function hasPermissionToManageDrivenHunt(profile: Profile, huntManagerPer
     return profile.personId === huntManagerPersonId;
 }
 
+export function hasPermissionToManageInfrastructure(profile: Profile, districtId: number | undefined) {
+    return hasAdministratorOrTrusteePermissionInDistrict(profile, districtId);
+}
+
 export function hasPermissionToCreateIndividualHunt(profile: Profile): boolean {
     return profile.isHunter ?? false;
 }
@@ -74,41 +132,12 @@ export function hasPermissionToApproveOrRejectIndividualHunt(profile: Profile, d
     return isTrusteeInDistrict(profile, districtId);
 }
 
-export function hasPermissionToViewIndividualHunt(
-    profile: Profile,
-    hunterPersonId: number,
-    huntEventStatus: HuntEventStatus,
-    huntPlace: HuntPlace,
-    districtId: number | undefined
-): boolean {
-    if (profile.personId === hunterPersonId) {
-        return true;
-    }
-
-    if (
-        huntEventStatus === HuntEventStatus.Scheduled &&
-        huntPlace === HuntPlace.InTheStation &&
-        districtId &&
-        isTrusteeInDistrict(profile, districtId)
-    ) {
-        return true;
-    }
-
-    return false;
-}
-
 export function isHunterInHunt(profile: Profile, hunters: Hunters) {
     return hunters.some((hunter) => hunter.personId === profile.personId);
 }
 
 export function hasPermissionToCreateDistrictMember(profile: Profile, districtId: number | undefined): boolean {
-    if (districtId === undefined) {
-        return false;
-    }
-    return profile.memberships.some(
-        (membership) =>
-            membership.huntingDistrictId === districtId && (membership.isAdministrator || membership.isTrustee)
-    );
+    return hasAdministratorOrTrusteePermissionInDistrict(profile, districtId);
 }
 
 export function hasPermissionToDeleteDistrictMember(
@@ -173,12 +202,5 @@ export function hasPermissionToCreateDistrictHuntReportsForOtherHunter(
     profile: Profile,
     districtId: number | undefined
 ) {
-    if (districtId === undefined) {
-        return false;
-    }
-
-    return profile.memberships.some(
-        (membership) =>
-            membership.huntingDistrictId === districtId && (membership.isAdministrator || membership.isTrustee)
-    );
+    return hasAdministratorOrTrusteePermissionInDistrict(profile, districtId);
 }

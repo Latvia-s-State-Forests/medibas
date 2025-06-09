@@ -1,23 +1,31 @@
-import { useActor } from "@xstate/react";
+import { useActor, useInterpret, useSelector } from "@xstate/react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { Modal, Pressable, StatusBar, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Map, MapHandle } from "~/components/map/map";
 import { configuration } from "~/configuration";
+import { useConfig } from "~/hooks/use-config";
+import { fetchPositionMachine } from "~/machines/fetch-position-machine";
 import { mapService } from "~/machines/map-machine";
 import { theme } from "~/theme";
 import { MapService } from "~/types/map";
 import { Button } from "../button";
+import { Dialog } from "../dialog";
 import { RoundIconButton } from "../round-icon-button";
+import { Spinner } from "../spinner";
+
+const MARKER_ZOOM = 16;
 
 type CurrentPositionIdleProps = {
     onMark: (position: GeoJSON.Position) => void;
     position: GeoJSON.Position | null;
+    positionType: "individualHunt" | "drivenHunt" | "infrastructure";
 };
 
-export function PositionSelect({ onMark, position }: CurrentPositionIdleProps) {
+export function PositionSelect({ onMark, position, positionType }: CurrentPositionIdleProps) {
     const { t } = useTranslation();
+    const config = useConfig();
     const insets = useSafeAreaInsets();
     const embeddedMapRef = React.useRef<MapHandle>(null);
     const fullscreenMapRef = React.useRef<MapHandle>(null);
@@ -28,6 +36,59 @@ export function PositionSelect({ onMark, position }: CurrentPositionIdleProps) {
     const [embeddedMapLoaded, setEmbeddedMapLoaded] = React.useState(false);
     const { bounds, minZoom, maxZoom, services } = configuration.map;
     const layers = [services[0], services[1]];
+
+    const [mapViewPosition, setMapViewPosition] = React.useState<
+        { center: GeoJSON.Position; zoom?: number } | undefined
+    >(undefined);
+
+    const fetchPositionActor = useInterpret(() => fetchPositionMachine, {
+        context: { config },
+        actions: {
+            onPositionSuccess: (context, event) => {
+                if (event.type === "POSITION_SUCCESS") {
+                    let zoom: number;
+                    if (mapViewPosition?.zoom && mapViewPosition.zoom >= MARKER_ZOOM) {
+                        zoom = mapViewPosition.zoom;
+                    } else {
+                        zoom = MARKER_ZOOM;
+                    }
+                    fullscreenMapRef.current?.sendAction({
+                        type: "setPosition",
+                        center: [event.position.longitude, event.position.latitude],
+                        zoom,
+                        animated: true,
+                    });
+                }
+            },
+        },
+    });
+
+    const [dialog, setDialog] = React.useState<{ visible: boolean; type: "loading" | "failure" }>({
+        visible: false,
+        type: "loading",
+    });
+
+    React.useEffect(() => {
+        const subscription = fetchPositionActor.subscribe((state) => {
+            if (state.matches("idle")) {
+                setDialog((dialog) => ({ ...dialog, visible: false }));
+            } else if (state.matches("fetchingPosition")) {
+                setDialog({ visible: true, type: "loading" });
+            } else if (state.matches("failure")) {
+                setDialog({ visible: true, type: "failure" });
+            }
+        });
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, [fetchPositionActor]);
+
+    const isFetchPositionActive = useSelector(fetchPositionActor, (state) => state.matches("fetchingPosition"));
+
+    function onFetchPositionButtonPress() {
+        fetchPositionActor.send({ type: "FETCH" });
+    }
 
     React.useEffect(() => {
         if (!embeddedMapLoaded) {
@@ -71,13 +132,17 @@ export function PositionSelect({ onMark, position }: CurrentPositionIdleProps) {
                 position && !(position[0] === 0 && position[1] === 0)
                     ? position
                     : configuration.map.initialPosition.center,
-            zoom: position && !(position[0] === 0 && position[1] === 0) ? 16 : configuration.map.initialPosition.zoom,
+            zoom:
+                position && !(position[0] === 0 && position[1] === 0)
+                    ? MARKER_ZOOM
+                    : configuration.map.initialPosition.zoom,
             bounds,
             minZoom,
             maxZoom,
             locationPinEnabled: !!position,
         });
     }
+
     async function onLoadFullScreenMap() {
         setFullScreenMapLoaded(true);
 
@@ -92,11 +157,13 @@ export function PositionSelect({ onMark, position }: CurrentPositionIdleProps) {
                 position && !(position[0] === 0 && position[1] === 0)
                     ? position
                     : configuration.map.initialPosition.center,
-            zoom: position && !(position[0] === 0 && position[1] === 0) ? 16 : configuration.map.initialPosition.zoom,
+            zoom:
+                position && !(position[0] === 0 && position[1] === 0)
+                    ? MARKER_ZOOM
+                    : configuration.map.initialPosition.zoom,
             bounds,
             minZoom,
             maxZoom,
-            mapMarker: true,
             locationPinEnabled: !!position && !mapOpenForEditing,
         });
     }
@@ -104,6 +171,8 @@ export function PositionSelect({ onMark, position }: CurrentPositionIdleProps) {
     function onModalClose() {
         setMapOpen(false);
         setMapOpenForEditing(false);
+
+        fetchPositionActor.send({ type: "CANCEL" });
     }
 
     function onModalOpen() {
@@ -114,18 +183,27 @@ export function PositionSelect({ onMark, position }: CurrentPositionIdleProps) {
         setMapOpenForEditing(() => true);
     }
 
-    function onMarkerSelected(position: GeoJSON.Position) {
-        onMark(position);
+    function onSubmitButtonPress() {
+        if (mapViewPosition) {
+            onMark(mapViewPosition.center);
+            onModalClose();
+        }
     }
 
-    function onGetMarkerPosition() {
-        fullscreenMapRef.current?.sendAction({
-            type: "getMarkerPosition",
-        });
+    function onMapViewPositionChanged(center: GeoJSON.Position, zoom?: number) {
+        setMapViewPosition({ center, zoom });
+    }
 
-        setTimeout(() => {
-            onModalClose();
-        }, 100);
+    function getLocationButtonText(): string {
+        switch (positionType) {
+            case "drivenHunt":
+                return t("hunt.drivenHunt.map.chooseLocation");
+            case "infrastructure":
+                return t("mtl.infrastructure.addLocation");
+            case "individualHunt":
+            default:
+                return t("hunt.individualHunt.map.chooseLocation");
+        }
     }
 
     return (
@@ -134,11 +212,7 @@ export function PositionSelect({ onMark, position }: CurrentPositionIdleProps) {
                 {!mapOpen && !mapOpenForEditing ? <Map onLoad={onLoadEmbeddedMap} ref={embeddedMapRef} /> : null}
                 {!position || (position[0] === 0 && position[1] === 0) ? (
                     <View style={[styles.mapOverlay, styles.dimmedOverlayCenter]}>
-                        <Button
-                            title={t("hunt.drivenHunt.map.chooseLocation")}
-                            variant="primary"
-                            onPress={onModalOpenForEditing}
-                        />
+                        <Button title={getLocationButtonText()} variant="primary" onPress={onModalOpenForEditing} />
                     </View>
                 ) : (
                     <Pressable style={styles.mapOverlay} onPress={onModalOpen}>
@@ -157,7 +231,26 @@ export function PositionSelect({ onMark, position }: CurrentPositionIdleProps) {
             >
                 <View style={styles.containerModal}>
                     <View style={[styles.statusBar, { height: insets.top }]} />
-                    <Map onLoad={onLoadFullScreenMap} onMarkerSelected={onMarkerSelected} ref={fullscreenMapRef} />
+                    <Map
+                        onLoad={onLoadFullScreenMap}
+                        ref={fullscreenMapRef}
+                        onViewPositionChanged={onMapViewPositionChanged}
+                    />
+                    {positionType === "infrastructure" && mapOpenForEditing ? (
+                        <View
+                            style={[
+                                styles.locationTrackingButton,
+                                { marginTop: insets.top + 16, marginRight: insets.right + 16 },
+                            ]}
+                        >
+                            <RoundIconButton
+                                elevation="high"
+                                onPress={onFetchPositionButtonPress}
+                                appearance={isFetchPositionActive ? "active" : "default"}
+                                name="target"
+                            />
+                        </View>
+                    ) : null}
                     <View
                         style={[
                             styles.buttonContainer,
@@ -177,12 +270,29 @@ export function PositionSelect({ onMark, position }: CurrentPositionIdleProps) {
                         {mapOpenForEditing ? (
                             <Button
                                 title={t("hunt.drivenHunt.map.choose")}
-                                onPress={onGetMarkerPosition}
+                                onPress={onSubmitButtonPress}
                                 style={styles.button}
                             />
                         ) : null}
                     </View>
                 </View>
+                <Dialog
+                    visible={dialog.visible}
+                    icon={dialog.type === "failure" ? "failure" : <Spinner />}
+                    title={dialog.type === "failure" ? t("map.position.failure.title") : t("currentPosition.loading")}
+                    description={dialog.type === "failure" ? t("map.position.failure.message") : undefined}
+                    onBackButtonPress={() =>
+                        fetchPositionActor.send({ type: dialog.type === "failure" ? "RESET" : "CANCEL" })
+                    }
+                    buttons={
+                        <Button
+                            title={dialog.type === "failure" ? t("modal.close") : t("modal.cancel")}
+                            onPress={() =>
+                                fetchPositionActor.send({ type: dialog.type === "failure" ? "RESET" : "CANCEL" })
+                            }
+                        />
+                    }
+                />
             </Modal>
         </>
     );
@@ -204,6 +314,12 @@ const styles = StyleSheet.create({
     containerModal: {
         flex: 1,
         backgroundColor: theme.color.background,
+    },
+    locationTrackingButton: {
+        position: "absolute",
+        top: 0,
+        right: 0,
+        flexDirection: "row",
     },
     buttonContainer: {
         flexDirection: "row",

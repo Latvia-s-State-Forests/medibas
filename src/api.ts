@@ -1,3 +1,4 @@
+import { fetch } from "expo/fetch";
 import { z } from "zod";
 import { configuration } from "./configuration";
 import { ENV } from "./env";
@@ -5,11 +6,13 @@ import { logger } from "./logger";
 import { getAccessToken } from "./machines/authentication-machine";
 import { accountDeletionSchema } from "./types/authentication";
 import { Classifiers, classifiersSchema } from "./types/classifiers";
+import { Config, configSchema } from "./types/config";
 import { Contract, getContractsResponseSchema, PostContractPermitsBody } from "./types/contracts";
 import { DistrictDamagesPerDistrictId, districtDamagesPerDistrictIdSchema } from "./types/district-damages";
 import { District, districtSchema } from "./types/districts";
 import { Features, featuresSchema } from "./types/features";
 import { HuntActivitiesRequest } from "./types/hunt-activities";
+import { HuntedAnimal, huntedAnimalsSchema } from "./types/hunted-animals";
 import {
     ApproveOrRejectIndividualHunt,
     Hunt,
@@ -18,8 +21,9 @@ import {
     huntsSchema,
     JoinHuntBody,
 } from "./types/hunts";
+import { Infrastructure, infrastructuresSchema } from "./types/infrastructure";
 import { MemberRole, Membership, membershipSchema } from "./types/mtl";
-import { newsSchema, NewsItem } from "./types/news";
+import { NewsItem, newsSchema } from "./types/news";
 import { PushNotificationsToken } from "./types/notifications";
 import { Permit, permitSchema } from "./types/permits";
 import { Profile, profileSchema } from "./types/profile";
@@ -158,6 +162,24 @@ export interface IndividualHuntBody {
     hasTargetSpecies: boolean;
     dogs: HuntDog[];
 }
+
+export type InfrastructureBody = {
+    id?: number;
+    guid?: string;
+    location: {
+        x: number;
+        y: number;
+    };
+    typeId: number;
+    notes?: string;
+    districtId: number;
+    createdOnDevice?: string;
+    changedOnDevice: string;
+};
+
+export type DeleteInfrastructure = {
+    id: number;
+};
 
 class Api {
     private baseUrl: string;
@@ -373,6 +395,10 @@ class Api {
         });
     }
 
+    public getHuntedAnimals(): Promise<HuntedAnimal[]> {
+        return this.request({ method: "GET", path: "/hunted-animals", schema: huntedAnimalsSchema });
+    }
+
     public getHunts(): Promise<Hunt[]> {
         return this.request({ method: "GET", path: "/hunts", schema: huntsSchema });
     }
@@ -398,7 +424,7 @@ class Api {
 
     private async postWithErrorHandling(
         url: string,
-        data: DrivenHuntBody | JoinHuntBody,
+        data: DrivenHuntBody | JoinHuntBody | InfrastructureBody,
         errorMessage: string
     ): Promise<{ success: true } | { success: false; errorCode?: number }> {
         const headers = await this.getRequestHeaders();
@@ -547,6 +573,61 @@ class Api {
             },
             body: token,
         });
+    }
+
+    public getInfrastructure(): Promise<Infrastructure[]> {
+        return this.request({ method: "GET", path: "/hunting-infrastructure", schema: infrastructuresSchema });
+    }
+
+    public getConfig(): Promise<Config> {
+        return this.request({ method: "GET", path: "/configs", schema: configSchema });
+    }
+
+    public async deleteInfrastructure(id: number) {
+        const headers = await this.getRequestHeaders();
+        headers["Content-Type"] = "application/json";
+
+        const response = await fetch(this.baseUrl + "/hunting-infrastructure", {
+            method: "DELETE",
+            headers,
+            body: JSON.stringify({ id }),
+        });
+
+        if (![200, 404].includes(response.status)) {
+            logger.error(
+                `Unexpected response status when deleting hunting infrastructure with id ${id}, expected 200 or 404, got ${response.status}`,
+                await response.text()
+            );
+            throw new Error("Unexpected response status");
+        }
+    }
+
+    public async addInfrastructure(body: InfrastructureBody): Promise<{ id: number }> {
+        const headers = await this.getRequestHeaders();
+        headers["Content-Type"] = "application/json";
+
+        const response = await fetch(this.baseUrl + "/hunting-infrastructure", {
+            method: "POST",
+            headers,
+            body: JSON.stringify(body),
+        });
+
+        if (![200, 400].includes(response.status)) {
+            logger.error(
+                `Unexpected response status when creating or updating hunting infrastructure, expected 200 or 400, got ${response.status}`,
+                await response.text()
+            );
+            throw new Error("Unexpected response content type");
+        }
+
+        const json = await response.json();
+
+        if ("id" in json && typeof json.id === "number" && json.id > 0) {
+            return { id: json.id };
+        }
+
+        logger.error("Missing id in response", json);
+        throw new Error("Missing id in response");
     }
 }
 

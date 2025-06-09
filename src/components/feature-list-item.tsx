@@ -1,25 +1,35 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, View, Platform, StyleSheet } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { configuration } from "~/configuration";
 import { useClassifiers } from "~/hooks/use-classifiers";
 import { getAppLanguage } from "~/i18n";
 import { theme } from "~/theme";
+import { ObservationTypeId } from "~/types/classifiers";
 import { DistrictDamage } from "~/types/district-damages";
 import { Feature } from "~/types/features";
+import { HuntedAnimal } from "~/types/hunted-animals";
+import { Infrastructure } from "~/types/infrastructure";
 import { getDescriptionForClassifierOption } from "~/utils/classifiers";
 import { formatDateTime } from "~/utils/format-date-time";
+import { isEditedInfrastructureNewer } from "~/utils/is-edited-infrastructure-newer";
 import { LargeIcon, LargeIconName } from "./icon";
 import { Text } from "./text";
 
 type FeatureListItemProps = {
     feature:
         | (Feature & { featureType: "damages" | "observations" })
-        | (DistrictDamage & { featureType: "district-damages" });
+        | (DistrictDamage & { featureType: "district-damages" })
+        | (Infrastructure & { featureType: "district-infrastructures" })
+        | (HuntedAnimal & { featureType: "district-hunted-others" })
+        | (HuntedAnimal & { featureType: "district-hunted-red-deer" })
+        | (HuntedAnimal & { featureType: "district-hunted-moose" })
+        | (HuntedAnimal & { featureType: "district-hunted-roe-deer" })
+        | (HuntedAnimal & { featureType: "district-hunted-boar" });
     onPress: () => void;
 };
 
-export function DistrictDamageFeatureListItem(props: FeatureListItemProps) {
+export function FeatureListItem(props: FeatureListItemProps) {
     const { t } = useTranslation();
     const classifiers = useClassifiers();
     const language = getAppLanguage();
@@ -27,12 +37,28 @@ export function DistrictDamageFeatureListItem(props: FeatureListItemProps) {
     const { featureType } = props.feature;
     function positionText(): string {
         let text = `${t("reports.coordinates")}: `;
-        if (featureType !== "district-damages") {
-            text += `${props.feature.geometry.coordinates[0].toFixed(
+        if (
+            featureType !== "district-damages" &&
+            featureType !== "district-infrastructures" &&
+            featureType !== "district-hunted-others" &&
+            featureType !== "district-hunted-red-deer" &&
+            featureType !== "district-hunted-moose" &&
+            featureType !== "district-hunted-roe-deer" &&
+            featureType !== "district-hunted-boar"
+        ) {
+            text += `${props.feature.geometry.coordinates[1].toFixed(
                 5
-            )}, ${props.feature.geometry.coordinates[1].toFixed(5)}`;
+            )}, ${props.feature.geometry.coordinates[0].toFixed(5)}`;
+        } else if (
+            featureType === "district-hunted-others" ||
+            featureType === "district-hunted-red-deer" ||
+            featureType === "district-hunted-moose" ||
+            featureType === "district-hunted-roe-deer" ||
+            featureType === "district-hunted-boar"
+        ) {
+            text += `${props.feature.location[1].toFixed(5)}, ${props.feature.location[0].toFixed(5)}`;
         } else {
-            text += `${props.feature.locationX.toFixed(5)}, ${props.feature.locationY.toFixed(5)}`;
+            text += `${props.feature.locationY.toFixed(5)}, ${props.feature.locationX.toFixed(5)}`;
         }
         return text;
     }
@@ -43,6 +69,25 @@ export function DistrictDamageFeatureListItem(props: FeatureListItemProps) {
                 props.feature.damageTypeId as keyof typeof configuration.damage.typeIcons
             ];
         }
+
+        if (featureType === "district-infrastructures") {
+            return configuration.huntingInfrastructure.typeIcons[
+                props.feature.typeId as keyof typeof configuration.huntingInfrastructure.typeIcons
+            ];
+        }
+
+        if (
+            featureType === "district-hunted-others" ||
+            featureType === "district-hunted-red-deer" ||
+            featureType === "district-hunted-moose" ||
+            featureType === "district-hunted-roe-deer" ||
+            featureType === "district-hunted-boar"
+        ) {
+            return configuration.hunt.speciesIcons[
+                props.feature.speciesId as keyof typeof configuration.hunt.speciesIcons
+            ];
+        }
+
         if (featureType === "damages") {
             return configuration.damage.typeIcons[
                 props.feature.properties.type as keyof typeof configuration.damage.typeIcons
@@ -50,10 +95,16 @@ export function DistrictDamageFeatureListItem(props: FeatureListItemProps) {
         }
 
         if (featureType === "observations") {
+            if (props.feature.properties.observationTypeId === ObservationTypeId.DirectlyObservedAnimals) {
+                return configuration.observations.speciesIcons[
+                    props.feature.properties.speciesId as keyof typeof configuration.observations.speciesIcons
+                ];
+            }
             return configuration.observations.typeIcons[
                 props.feature.properties.observationTypeId as keyof typeof configuration.observations.typeIcons
             ];
         }
+
         return "animals";
     }
 
@@ -64,6 +115,28 @@ export function DistrictDamageFeatureListItem(props: FeatureListItemProps) {
             return (
                 getDescriptionForClassifierOption(classifiers.damageTypes.options, language, feature.damageTypeId) ??
                 "-"
+            );
+        }
+
+        if (feature.featureType === "district-infrastructures") {
+            return (
+                getDescriptionForClassifierOption(
+                    classifiers.huntingInfrastructureTypes.options,
+                    language,
+                    feature.typeId
+                ) ?? "-"
+            );
+        }
+
+        if (
+            feature.featureType === "district-hunted-others" ||
+            feature.featureType === "district-hunted-red-deer" ||
+            feature.featureType === "district-hunted-moose" ||
+            feature.featureType === "district-hunted-roe-deer" ||
+            feature.featureType === "district-hunted-boar"
+        ) {
+            return (
+                getDescriptionForClassifierOption(classifiers.animalSpecies.options, language, feature.speciesId) ?? "-"
             );
         }
 
@@ -92,10 +165,22 @@ export function DistrictDamageFeatureListItem(props: FeatureListItemProps) {
     }
 
     function date(): string {
-        if (featureType !== "district-damages") {
-            return formatDateTime(props.feature.properties.reportCreatedOn);
+        if (
+            featureType === "district-hunted-others" ||
+            featureType === "district-hunted-red-deer" ||
+            featureType === "district-hunted-moose" ||
+            featureType === "district-hunted-roe-deer" ||
+            featureType === "district-hunted-boar"
+        ) {
+            return formatDateTime(props.feature.huntedTime);
         }
-        return formatDateTime(props.feature.vmdAcceptedOn);
+        if (featureType === "district-damages") {
+            return formatDateTime(props.feature.vmdAcceptedOn);
+        }
+        if (featureType === "district-infrastructures") {
+            return formatDateTime(props.feature.createdOnDevice);
+        }
+        return formatDateTime(props.feature.properties.reportCreatedOn);
     }
 
     return (
@@ -115,10 +200,26 @@ export function DistrictDamageFeatureListItem(props: FeatureListItemProps) {
                     </Text>
                 </View>
 
-                <View style={styles.secondRow}>
-                    <Text size={12} style={styles.date}>
-                        {date()}
-                    </Text>
+                <View style={styles.dateRows}>
+                    {featureType === "district-infrastructures" ? (
+                        <>
+                            <Text size={12} style={styles.date}>
+                                {t("mtl.infrastructure.added")}: {formatDateTime(props.feature.createdOnDevice)}
+                            </Text>
+                            {isEditedInfrastructureNewer(
+                                props.feature.createdOnDevice,
+                                props.feature.changedOnDevice
+                            ) && (
+                                <Text size={12} style={styles.date}>
+                                    {t("mtl.infrastructure.edited")}: {formatDateTime(props.feature.changedOnDevice)}
+                                </Text>
+                            )}
+                        </>
+                    ) : (
+                        <Text size={12} style={styles.date}>
+                            {date()}
+                        </Text>
+                    )}
                 </View>
                 <Text size={12}>{positionText()}</Text>
             </View>
@@ -168,9 +269,8 @@ const styles = StyleSheet.create({
     title: {
         flex: 1,
     },
-    secondRow: {
-        flexDirection: "row",
-        gap: 8,
+    dateRows: {
+        gap: 4,
     },
     date: {
         flex: 1,

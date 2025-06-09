@@ -16,6 +16,7 @@ import { ErrorMessage } from "~/components/error-message";
 import { Header } from "~/components/header";
 import { useHuntActivitiesContext } from "~/components/hunt-activities-provider";
 import { SmallIcon, SmallIconName } from "~/components/icon";
+import { NavigationButton } from "~/components/navigation-button";
 import { ReadOnlyField } from "~/components/read-only-field";
 import { Spacer } from "~/components/spacer";
 import { Text } from "~/components/text";
@@ -30,7 +31,9 @@ import { HuntActivityType } from "~/types/hunt-activities";
 import { Hunt, HuntEventStatus, HuntPlace } from "~/types/hunts";
 import { RootNavigatorParams } from "~/types/navigation";
 import { formatDate } from "~/utils/format-date-time";
+import { formatPosition } from "~/utils/format-position";
 import { getEquipmentStatus } from "~/utils/individual-hunt-equipment";
+import { HuntLocationViewer } from "../driven-hunt/hunt-location-viewer";
 import { HuntedSpeciesList } from "../driven-hunt/lists/hunted-species-list";
 import { Modal } from "../driven-hunt/modal";
 import { getPlannedSpeciesOptions } from "../get-planned-species-options";
@@ -64,6 +67,7 @@ function Content({ hunt }: ContentProps) {
     const insets = useSafeAreaInsets();
     const permissions = usePermissions();
     const classifiers = useClassifiers();
+    const locationLabel = `${hunt.vmdCode} ${t("hunt.individualHunt.huntPlace")}`;
     const { confirm } = useConfirmationDialog();
     const [showHuntDialog, setSowHuntDialog] = React.useState(false);
     const equipmentSpecies = hunt.targetSpecies.filter((species) =>
@@ -359,6 +363,29 @@ function Content({ hunt }: ContentProps) {
                     {!equalHuntStartEndDates ? (
                         <ReadOnlyField label={t("hunt.individualHunt.date.endDate")} value={dateTo} />
                     ) : null}
+                    {hunt.meetingPointY && hunt.meetingPointX ? (
+                        <>
+                            <HuntLocationViewer
+                                huntType="individualHunt"
+                                latitude={hunt.meetingPointY}
+                                longitude={hunt.meetingPointX}
+                            />
+                            <View style={styles.navigation}>
+                                <ReadOnlyField
+                                    label={t("hunt.individualHunt.locationCoordinates")}
+                                    value={formatPosition({
+                                        latitude: hunt.meetingPointY,
+                                        longitude: hunt.meetingPointX,
+                                    })}
+                                />
+                                <NavigationButton
+                                    latitude={hunt.meetingPointY}
+                                    longitude={hunt.meetingPointX}
+                                    locationLabel={locationLabel}
+                                />
+                            </View>
+                        </>
+                    ) : null}
                     {huntDogs.length > 0 && <ReadOnlyField label={t("hunt.individualHunt.dogs")} value={huntDogs} />}
                     {huntedSpecies.length > 0 && (
                         <ReadOnlyField label={t("hunt.individualHunt.huntingSpecies")} value={huntedSpecies} />
@@ -528,6 +555,11 @@ const styles = StyleSheet.create({
     formContentContainer: {
         flex: 1,
         gap: 24,
+    },
+    navigation: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
     },
     validationErrorMessages: {
         gap: 19,

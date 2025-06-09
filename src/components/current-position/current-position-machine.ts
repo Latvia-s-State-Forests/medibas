@@ -1,14 +1,14 @@
 import * as Location from "expo-location";
 import { Platform } from "react-native";
 import { assign, createMachine } from "xstate";
-import { configuration } from "~/configuration";
 import { logger } from "~/logger";
+import { Config } from "~/types/config";
 import { PositionResult } from "~/types/position-result";
 
 export const currentPositionMachine = createMachine(
     {
         schema: {
-            context: {} as { position?: PositionResult | undefined },
+            context: {} as { position?: PositionResult | undefined; config: Config },
             events: {} as
                 | { type: "SERVICES_ENABLED" }
                 | { type: "SERVICES_DISABLED" }
@@ -177,17 +177,21 @@ export const currentPositionMachine = createMachine(
                         send("PERMISSIONS_DENIED");
                     });
             },
-            watchPosition: () => (send) => {
+            watchPosition: (context) => (send) => {
+                const { config } = context;
                 let subscription: Location.LocationSubscription | undefined;
                 let isInaccuratePositionReceived = false;
 
-                const timeout = setTimeout(() => {
-                    if (isInaccuratePositionReceived) {
-                        send("POSITION_FAILURE_ACCURACY");
-                    } else {
-                        send("POSITION_FAILURE_OTHER");
-                    }
-                }, configuration.currentPosition.timeout);
+                const timeout = setTimeout(
+                    () => {
+                        if (isInaccuratePositionReceived) {
+                            send("POSITION_FAILURE_ACCURACY");
+                        } else {
+                            send("POSITION_FAILURE_OTHER");
+                        }
+                    },
+                    Number(config.gpsTimeout) * 1000
+                );
 
                 Location.watchPositionAsync(
                     { accuracy: Location.Accuracy.Highest },
@@ -195,23 +199,19 @@ export const currentPositionMachine = createMachine(
                         // Apply validations in production only
                         if (process.env.APP_VARIANT === "production" || process.env.APP_VARIANT === "beta") {
                             // Position must be accurate
-                            if (
-                                coords.accuracy === null ||
-                                coords.accuracy > configuration.currentPosition.minAccuracy
-                            ) {
+                            if (coords.accuracy === null || coords.accuracy > Number(config.gpsMinAccuracy)) {
                                 logger.error(
-                                    `Invalid position, expected <= ${configuration.currentPosition.minAccuracy} m, got ${coords.accuracy} m`
+                                    `Invalid position, expected <= ${config.gpsMinAccuracy} m, got ${coords.accuracy} m`
                                 );
                                 isInaccuratePositionReceived = true;
                                 return;
                             }
-
+                            const gpsMaxAgeMs = Number(config.gpsMaxAge) * 1000;
+                            const actualAgeMs = Date.now() - timestamp;
                             // Position must be recent
-                            if (Date.now() - timestamp > configuration.currentPosition.maxAge) {
+                            if (actualAgeMs > gpsMaxAgeMs) {
                                 logger.error(
-                                    `Invalid position, expected age <= ${
-                                        configuration.currentPosition.maxAge
-                                    } ms, got ${Date.now() - timestamp} ms`
+                                    `Invalid position, expected age <= ${gpsMaxAgeMs} ms, got ${actualAgeMs} ms`
                                 );
                                 return;
                             }

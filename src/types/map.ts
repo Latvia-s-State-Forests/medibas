@@ -13,7 +13,7 @@ export type MapPosition = {
 
 interface MapServiceBase {
     id: string;
-    title: string;
+    title?: string;
     thumbnail: string;
     minZoom?: number;
     maxZoom?: number;
@@ -51,7 +51,17 @@ export interface MapServiceWmtsTiled extends MapServiceBase {
 
 export interface MapServiceCustom extends MapServiceBase {
     type: "Custom";
-    id: "observations" | "damages" | "district-damages" | "districts";
+    id:
+        | "observations"
+        | "damages"
+        | "district-damages"
+        | "districts"
+        | "district-hunted-others"
+        | "district-infrastructures"
+        | "district-hunted-red-deer"
+        | "district-hunted-moose"
+        | "district-hunted-roe-deer"
+        | "district-hunted-boar";
 }
 
 export interface MapServiceCustomWithFeatures extends MapServiceCustom {

@@ -1,5 +1,5 @@
 import { HunterCardTypeId } from "~/types/classifiers";
-import { Hunters, HuntEventStatus, HuntPlace } from "~/types/hunts";
+import { Hunters } from "~/types/hunts";
 import { MemberRole, Membership } from "../types/mtl";
 import { Profile } from "../types/profile";
 import {
@@ -9,17 +9,21 @@ import {
     hasPermissionToCreateDistrictMember,
     hasPermissionToCreateDrivenHunt,
     hasPermissionToCreateIndividualHunt,
+    hasPermissionToManageInfrastructure,
     hasPermissionToDeleteDistrictMember,
     hasPermissionToManageDrivenHunt,
     hasPermissionToUpdateDistrictMemberRoles,
     hasPermissionToViewDistrictDamages,
     hasPermissionToViewDistrictMemberRoles,
     hasPermissionToViewDistrictOnMap,
-    hasPermissionToViewHunt,
-    hasPermissionToViewIndividualHunt,
     hasPermissionToViewMemberManagement,
     hasPermissionToViewMtl,
     isHunterInHunt,
+    hasPermissionToRegisterHunt,
+    hasPermissionToViewHunt,
+    hasPermissionToViewHuntedAnimalsOnMap,
+    hasPermissionToViewInfrastructures,
+    hasPermissionToViewInfrastructuresLayer,
 } from "./permissions";
 
 describe("hasPermissionToViewDistrictOnMap", () => {
@@ -44,6 +48,7 @@ describe("hasPermissionToViewHunt", () => {
                 { cardTypeId: HunterCardTypeId.Hunter, cardNumber: "H1" },
                 { cardTypeId: HunterCardTypeId.Season, cardNumber: "S1" },
             ],
+            memberships: [],
         };
         const result = hasPermissionToViewHunt(profile as Profile);
         expect(result).toBe(true);
@@ -52,6 +57,7 @@ describe("hasPermissionToViewHunt", () => {
     it("valid hunter card, missing season card", () => {
         const profile: unknown = {
             hunterCards: [{ cardTypeId: HunterCardTypeId.Hunter, cardNumber: "H1" }],
+            memberships: [],
         };
         const result = hasPermissionToViewHunt(profile as Profile);
         expect(result).toBe(false);
@@ -60,6 +66,7 @@ describe("hasPermissionToViewHunt", () => {
     it("missing hunter card, valid season card", () => {
         const profile: unknown = {
             hunterCards: [{ cardTypeId: HunterCardTypeId.Season, cardNumber: "S1" }],
+            memberships: [],
         };
         const result = hasPermissionToViewHunt(profile as Profile);
         expect(result).toBe(false);
@@ -68,8 +75,87 @@ describe("hasPermissionToViewHunt", () => {
     it("missing hunter card, missing season card", () => {
         const profile: unknown = {
             hunterCards: [],
+            memberships: [],
         };
         const result = hasPermissionToViewHunt(profile as Profile);
+        expect(result).toBe(false);
+    });
+
+    it("administrator without valid cards", () => {
+        const profile: unknown = {
+            hunterCards: [],
+            memberships: [
+                {
+                    huntingDistrictId: 1,
+                    isAdministrator: true,
+                },
+            ],
+        };
+        const result = hasPermissionToViewHunt(profile as Profile);
+        expect(result).toBe(true);
+    });
+
+    it("trustee without valid cards", () => {
+        const profile: unknown = {
+            hunterCards: [],
+            memberships: [
+                {
+                    huntingDistrictId: 1,
+                    isTrustee: true,
+                },
+            ],
+        };
+        const result = hasPermissionToViewHunt(profile as Profile);
+        expect(result).toBe(true);
+    });
+});
+
+describe("hasPermissionToViewHuntedAnimalsOnMap", () => {
+    it("returns false if districtId is undefined", () => {
+        const profile: unknown = {
+            memberships: [{ huntingDistrictId: 1, isHunter: true }],
+        };
+        const result = hasPermissionToViewHuntedAnimalsOnMap(profile as Profile, undefined);
+        expect(result).toBe(false);
+    });
+
+    it("returns true if user is a hunter in the district", () => {
+        const profile: unknown = {
+            memberships: [{ huntingDistrictId: 1, isHunter: true }],
+        };
+        const result = hasPermissionToViewHuntedAnimalsOnMap(profile as Profile, 1);
+        expect(result).toBe(true);
+    });
+
+    it("returns true if user is a trustee in the district", () => {
+        const profile: unknown = {
+            memberships: [{ huntingDistrictId: 1, isTrustee: true }],
+        };
+        const result = hasPermissionToViewHuntedAnimalsOnMap(profile as Profile, 1);
+        expect(result).toBe(true);
+    });
+
+    it("returns true if user is an administrator in the district", () => {
+        const profile: unknown = {
+            memberships: [{ huntingDistrictId: 1, isAdministrator: true }],
+        };
+        const result = hasPermissionToViewHuntedAnimalsOnMap(profile as Profile, 1);
+        expect(result).toBe(true);
+    });
+
+    it("returns false if user has membership but no required roles", () => {
+        const profile: unknown = {
+            memberships: [{ huntingDistrictId: 1, isHunter: false, isTrustee: false, isAdministrator: false }],
+        };
+        const result = hasPermissionToViewHuntedAnimalsOnMap(profile as Profile, 1);
+        expect(result).toBe(false);
+    });
+
+    it("returns false if user has required roles but in a different district", () => {
+        const profile: unknown = {
+            memberships: [{ huntingDistrictId: 1, isHunter: true }],
+        };
+        const result = hasPermissionToViewHuntedAnimalsOnMap(profile as Profile, 2);
         expect(result).toBe(false);
     });
 });
@@ -96,6 +182,44 @@ describe("hasPermissionToViewMtl", () => {
         expect(result).toBe(false);
     });
 });
+
+describe("hasPermissionToRegisterHunt", () => {
+    it("valid hunter card, valid season card", () => {
+        const profile: unknown = {
+            hunterCards: [
+                { cardTypeId: HunterCardTypeId.Hunter, cardNumber: "H1" },
+                { cardTypeId: HunterCardTypeId.Season, cardNumber: "S1" },
+            ],
+        };
+        const result = hasPermissionToRegisterHunt(profile as Profile);
+        expect(result).toBe(true);
+    });
+
+    it("valid hunter card, missing season card", () => {
+        const profile: unknown = {
+            hunterCards: [{ cardTypeId: HunterCardTypeId.Hunter, cardNumber: "H1" }],
+        };
+        const result = hasPermissionToRegisterHunt(profile as Profile);
+        expect(result).toBe(false);
+    });
+
+    it("missing hunter card, valid season card", () => {
+        const profile: unknown = {
+            hunterCards: [{ cardTypeId: HunterCardTypeId.Season, cardNumber: "S1" }],
+        };
+        const result = hasPermissionToRegisterHunt(profile as Profile);
+        expect(result).toBe(false);
+    });
+
+    it("missing hunter card, missing season card", () => {
+        const profile: unknown = {
+            hunterCards: [],
+        };
+        const result = hasPermissionToRegisterHunt(profile as Profile);
+        expect(result).toBe(false);
+    });
+});
+
 describe("hasPermissionToViewDistrictDamages", () => {
     it("returns true if has district membership", () => {
         const profile: unknown = {
@@ -115,6 +239,122 @@ describe("hasPermissionToViewDistrictDamages", () => {
             memberships: [],
         };
         const result = hasPermissionToViewDistrictDamages(profile as Profile);
+        expect(result).toBe(false);
+    });
+});
+
+describe("hasPermissionToViewInfrastructures", () => {
+    it("returns true if has administrator role", () => {
+        const profile: unknown = {
+            memberships: [
+                {
+                    isMember: true,
+                    isAdministrator: true,
+                },
+            ],
+        };
+        const result = hasPermissionToViewInfrastructures(profile as Profile);
+        expect(result).toBe(true);
+    });
+
+    it("returns true if has trustee role", () => {
+        const profile: unknown = {
+            memberships: [
+                {
+                    isMember: true,
+                    isTrustee: true,
+                },
+            ],
+        };
+        const result = hasPermissionToViewInfrastructures(profile as Profile);
+        expect(result).toBe(true);
+    });
+
+    it("returns true if has hunter role", () => {
+        const profile: unknown = {
+            memberships: [
+                {
+                    isMember: true,
+                    isAdministrator: false,
+                    isTrustee: false,
+                    isHunter: true,
+                },
+            ],
+        };
+        const result = hasPermissionToViewInfrastructures(profile as Profile);
+        expect(result).toBe(true);
+    });
+
+    it("returns false if does not have any required roles", () => {
+        const profile: unknown = {
+            memberships: [
+                {
+                    isMember: true,
+                    isAdministrator: false,
+                    isTrustee: false,
+                    isHunter: false,
+                },
+            ],
+        };
+        const result = hasPermissionToViewInfrastructures(profile as Profile);
+        expect(result).toBe(false);
+    });
+
+    it("returns false if has empty memberships", () => {
+        const profile: unknown = {
+            memberships: [],
+        };
+        const result = hasPermissionToViewInfrastructures(profile as Profile);
+        expect(result).toBe(false);
+    });
+});
+
+describe("hasPermissionToViewInfrastructuresLayer", () => {
+    it("returns false if districtId is undefined", () => {
+        const profile: unknown = {
+            memberships: [{ huntingDistrictId: 1, isHunter: true }],
+        };
+        const result = hasPermissionToViewInfrastructuresLayer(profile as Profile, undefined);
+        expect(result).toBe(false);
+    });
+
+    it("returns true if user is a hunter in the district", () => {
+        const profile: unknown = {
+            memberships: [{ huntingDistrictId: 1, isHunter: true }],
+        };
+        const result = hasPermissionToViewInfrastructuresLayer(profile as Profile, 1);
+        expect(result).toBe(true);
+    });
+
+    it("returns true if user is a trustee in the district", () => {
+        const profile: unknown = {
+            memberships: [{ huntingDistrictId: 1, isTrustee: true }],
+        };
+        const result = hasPermissionToViewInfrastructuresLayer(profile as Profile, 1);
+        expect(result).toBe(true);
+    });
+
+    it("returns true if user is an administrator in the district", () => {
+        const profile: unknown = {
+            memberships: [{ huntingDistrictId: 1, isAdministrator: true }],
+        };
+        const result = hasPermissionToViewInfrastructuresLayer(profile as Profile, 1);
+        expect(result).toBe(true);
+    });
+
+    it("returns false if user has membership but no required roles", () => {
+        const profile: unknown = {
+            memberships: [{ huntingDistrictId: 1, isHunter: false, isTrustee: false, isAdministrator: false }],
+        };
+        const result = hasPermissionToViewInfrastructuresLayer(profile as Profile, 1);
+        expect(result).toBe(false);
+    });
+
+    it("returns false if user has required roles but in a different district", () => {
+        const profile: unknown = {
+            memberships: [{ huntingDistrictId: 1, isHunter: true }],
+        };
+        const result = hasPermissionToViewInfrastructuresLayer(profile as Profile, 2);
         expect(result).toBe(false);
     });
 });
@@ -275,6 +515,48 @@ describe("hasPermissionToManageDrivenHunt", () => {
     });
 });
 
+describe("hasPermissionToManageInfrastructure", () => {
+    it("returns true if has administrator role in district", () => {
+        const profile: unknown = {
+            memberships: [
+                {
+                    huntingDistrictId: 1,
+                    isMember: true,
+                    isAdministrator: true,
+                },
+            ],
+        };
+        const result = hasPermissionToManageInfrastructure(profile as Profile, 1);
+        expect(result).toBe(true);
+    });
+
+    it("returns true if has trustee role in district", () => {
+        const profile: unknown = {
+            memberships: [
+                {
+                    huntingDistrictId: 1,
+                    isMember: true,
+                    isTrustee: true,
+                },
+            ],
+        };
+        const result = hasPermissionToManageInfrastructure(profile as Profile, 1);
+        expect(result).toBe(true);
+    });
+    it("returns false if admin/trustee role has not been assigned in district", () => {
+        const profile: unknown = {
+            memberships: [
+                {
+                    huntingDistrictId: 1,
+                    isMember: true,
+                },
+            ],
+        };
+        const result = hasPermissionToManageInfrastructure(profile as Profile, 1);
+        expect(result).toBe(false);
+    });
+});
+
 describe("hasPermissionToCreateIndividualHunt", () => {
     it("returns true if is hunter", () => {
         const profile = {
@@ -345,75 +627,6 @@ describe("hasPermissionToApproveOrRejectIndividualHunt", () => {
         const result = hasPermissionToApproveOrRejectIndividualHunt(profile, districtId);
 
         expect(result).toBe(false);
-    });
-});
-
-describe("hasPermissionToViewIndividualHunt", () => {
-    const statuses = [
-        HuntEventStatus.Scheduled,
-        HuntEventStatus.Active,
-        HuntEventStatus.Paused,
-        HuntEventStatus.Concluded,
-    ];
-    const places = [HuntPlace.InTheStation, HuntPlace.WaterBody, HuntPlace.OutSideStation];
-
-    it("hunter has permission to view all of their individual hunts", () => {
-        const profile = {
-            personId: 1,
-        } as Profile;
-        const hunterPersonId = 1;
-        for (const status of statuses) {
-            for (const place of places) {
-                const districtId = place === HuntPlace.InTheStation ? 1 : undefined;
-                const result = hasPermissionToViewIndividualHunt(profile, hunterPersonId, status, place, districtId);
-                expect(result).toBe(true);
-            }
-        }
-    });
-
-    it("trustee has permission to view only scheduled individual hunts in their district", () => {
-        const profile = {
-            personId: 2,
-            memberships: [
-                {
-                    huntingDistrictId: 1,
-                    isTrustee: true,
-                },
-            ],
-        } as Profile;
-        const hunterPersonId = 1;
-        for (const status of statuses) {
-            for (const place of places) {
-                const districtId = place === HuntPlace.InTheStation ? 1 : undefined;
-                const result = hasPermissionToViewIndividualHunt(profile, hunterPersonId, status, place, districtId);
-                const expected = status === HuntEventStatus.Scheduled && place === HuntPlace.InTheStation;
-                expect(result).toBe(expected);
-            }
-        }
-    });
-
-    it("other users doesn't have permission to view individual hunt", () => {
-        const profile = {
-            personId: 3,
-            memberships: [
-                {
-                    huntingDistrictId: 1,
-                    isTrustee: false,
-                    isAdministrator: true,
-                    isManager: true,
-                    isHunter: true,
-                },
-            ],
-        } as Profile;
-        const hunterPersonId = 1;
-
-        for (const status of statuses) {
-            for (const place of places) {
-                const districtId = place === HuntPlace.InTheStation ? 1 : undefined;
-                const result = hasPermissionToViewIndividualHunt(profile, hunterPersonId, status, place, districtId);
-                expect(result).toBe(false);
-            }
-        }
     });
 });
 

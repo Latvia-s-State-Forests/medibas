@@ -8,7 +8,7 @@ import { ScreenBackgroundLayout } from "~/components/screen-background-layout";
 import { Spacer } from "~/components/spacer";
 import { Spinner } from "~/components/spinner";
 import { Text } from "~/components/text";
-import { fileLoggerTransport, logger } from "~/logger";
+import { logger } from "~/logger";
 import { useAuth } from "~/machines/authentication-machine";
 import { theme } from "~/theme";
 
@@ -81,15 +81,23 @@ export function InitialLoadingFailedScreen(props: InitialLoadingFailedScreenProp
     const [, send] = useAuth();
     const [showDebugDialog, setShowDebugDialog] = React.useState(false);
     const [showConfirmLogout, setShowConfirmLogout] = React.useState(false);
+    const [isShareLogsInProgress, setIsShareLogsInProgress] = React.useState(false);
+
     function onModalClose() {
         setShowDebugDialog(false);
     }
 
     function onShareLogsPress() {
-        fileLoggerTransport.share().catch((error) => {
-            logger.error("Failed to share logs", error);
-            setShowDebugDialog(true);
-        });
+        setIsShareLogsInProgress(true);
+        logger
+            .share()
+            .catch((error) => {
+                logger.error("Failed to share logs", error);
+                setShowDebugDialog(true);
+            })
+            .finally(() => {
+                setIsShareLogsInProgress(false);
+            });
     }
 
     function onLogoutConfirmed() {
@@ -115,7 +123,12 @@ export function InitialLoadingFailedScreen(props: InitialLoadingFailedScreenProp
                     title={t("menu.exit.button")}
                 />
                 <Spacer size={16} />
-                <Button onPress={onShareLogsPress} variant="secondary-dark" title={t("initialLoading.sendDebugInfo")} />
+                <Button
+                    onPress={onShareLogsPress}
+                    variant="secondary-dark"
+                    title={t("initialLoading.sendDebugInfo")}
+                    disabled={isShareLogsInProgress}
+                />
             </View>
             <Dialog
                 visible={showDebugDialog}

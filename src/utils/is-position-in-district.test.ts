@@ -1,3 +1,4 @@
+import { Config } from "~/types/config";
 import { District } from "~/types/districts";
 import { isPositionInDistrict } from "./is-position-in-district";
 
@@ -21,13 +22,26 @@ const districts: District[] = [
     },
 ];
 
+const mockConfig: Config = {
+    huntSeasonEndDate: "",
+    huntSeasonStartDate: "",
+    currentSeasonYear: "",
+    injuredHuntDownMaxDays: "",
+    availablePermitCount: "",
+    districtDamagesShowDays: "",
+    gpsMaxAge: "60",
+    gpsMinAccuracy: "30",
+    gpsTimeout: "30",
+    status: "ok",
+};
+
 describe("isPositionInDistrict", () => {
     it("returns true when in district", () => {
         const position = {
             latitude: 56.65464085894956,
             longitude: 25.316050502892182,
         };
-        const result = isPositionInDistrict(position, 1, districts);
+        const result = isPositionInDistrict(position, 1, districts, mockConfig);
         expect(result).toBe(true);
     });
 
@@ -36,7 +50,7 @@ describe("isPositionInDistrict", () => {
             latitude: 56.65527367494727,
             longitude: 25.316062167066804,
         };
-        const result = isPositionInDistrict(position, 1, districts);
+        const result = isPositionInDistrict(position, 1, districts, mockConfig);
         expect(result).toBe(true);
     });
 
@@ -45,7 +59,7 @@ describe("isPositionInDistrict", () => {
             latitude: 56.65578823025356,
             longitude: 25.316048827607148,
         };
-        const result = isPositionInDistrict(position, 10009, districts);
+        const result = isPositionInDistrict(position, 10009, districts, mockConfig);
         expect(result).toBe(false);
     });
 
@@ -54,7 +68,7 @@ describe("isPositionInDistrict", () => {
             latitude: 56.65464085894956,
             longitude: 25.316050502892182,
         };
-        const result = isPositionInDistrict(position, 2, districts);
+        const result = isPositionInDistrict(position, 2, districts, mockConfig);
         expect(result).toBe(false);
     });
 });

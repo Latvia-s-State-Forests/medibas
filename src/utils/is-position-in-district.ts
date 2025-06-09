@@ -1,11 +1,16 @@
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import buffer from "@turf/buffer";
 import { point } from "@turf/helpers";
-import { configuration } from "~/configuration";
+import { Config } from "~/types/config";
 import { District } from "~/types/districts";
 import { PositionResult } from "~/types/position-result";
 
-export function isPositionInDistrict(position: PositionResult, districtId: number, districts: District[]): boolean {
+export function isPositionInDistrict(
+    position: PositionResult,
+    districtId: number,
+    districts: District[],
+    config: Config
+): boolean {
     const district = districts.find((district) => district.id === districtId);
 
     if (!district) {
@@ -19,7 +24,7 @@ export function isPositionInDistrict(position: PositionResult, districtId: numbe
                 properties: {},
                 geometry: district.shapeWgs,
             },
-            configuration.currentPosition.minAccuracy,
+            Number(config.gpsMinAccuracy),
             { units: "meters" }
         );
 

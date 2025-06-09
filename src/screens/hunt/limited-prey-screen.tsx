@@ -20,6 +20,7 @@ import { Spacer } from "~/components/spacer";
 import { Switch } from "~/components/switch";
 import { WarningMessage } from "~/components/warning-message";
 import { useClassifiers } from "~/hooks/use-classifiers";
+import { useConfig } from "~/hooks/use-config";
 import { useDistricts, useInfectedDistricts } from "~/hooks/use-districts";
 import { useMemberships } from "~/hooks/use-memberships";
 import { usePermissions } from "~/hooks/use-permissions";
@@ -81,6 +82,7 @@ type LimitedPreyFormProps = NativeStackScreenProps<RootNavigatorParams, "Limited
 export function LimitedPreyScreen({ navigation, route }: LimitedPreyFormProps) {
     const { t } = useTranslation();
     const classifiers = useClassifiers();
+    const config = useConfig();
     const profile = useProfile();
     const memberships = useMemberships();
     const reports = useReportsContext();
@@ -256,9 +258,9 @@ export function LimitedPreyScreen({ navigation, route }: LimitedPreyFormProps) {
     const outOfDistrictWarning = useMemo(
         () =>
             limitedPrey.position
-                ? !isPositionInDistrict(limitedPrey.position, limitedPrey.huntingDistrictId, districts)
+                ? !isPositionInDistrict(limitedPrey.position, limitedPrey.huntingDistrictId, districts, config)
                 : false,
-        [limitedPrey.position, limitedPrey.huntingDistrictId, districts]
+        [limitedPrey.position, limitedPrey.huntingDistrictId, districts, config]
     );
 
     const validationWarnings = getLimitedPreyValidationWarnings(

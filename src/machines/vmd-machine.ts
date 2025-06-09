@@ -1,6 +1,7 @@
 import * as Crypto from "expo-crypto";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
+import { fetch } from "expo/fetch";
 import { createMachine } from "xstate";
 import { api } from "~/api";
 import { ENV } from "~/env";

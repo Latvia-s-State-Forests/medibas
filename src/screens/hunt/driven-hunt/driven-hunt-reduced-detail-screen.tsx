@@ -13,7 +13,7 @@ import { Hunt } from "~/types/hunts";
 import { RootNavigatorParams } from "~/types/navigation";
 import { formatDate, formatTime } from "~/utils/format-date-time";
 import { formatPosition } from "~/utils/format-position";
-import { DrivenHuntMeetingPlace } from "./driven-hunt-meeting-place";
+import { HuntLocationViewer } from "./hunt-location-viewer";
 import { TargetSpeciesList } from "./lists/target-species-list";
 
 type DrivenHuntReducedDetailScreenProps = NativeStackScreenProps<RootNavigatorParams, "DrivenHuntReducedDetailScreen">;
@@ -73,7 +73,11 @@ function Content({ hunt }: ContentProps) {
                 ) : null}
                 {hunt.meetingPointY && hunt.meetingPointX ? (
                     <>
-                        <DrivenHuntMeetingPlace latitude={hunt.meetingPointY} longitude={hunt.meetingPointX} />
+                        <HuntLocationViewer
+                            huntType="drivenHunt"
+                            latitude={hunt.meetingPointY}
+                            longitude={hunt.meetingPointX}
+                        />
                         <View style={styles.navigation}>
                             <ReadOnlyField
                                 label={t("hunt.drivenHunt.detailScreen.meetingPoint")}

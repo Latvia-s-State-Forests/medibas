@@ -10,7 +10,8 @@ import { BottomSheet } from "~/components/bottom-sheet";
 import { Button } from "~/components/button";
 import { Collapsible } from "~/components/collapsible/collapsible";
 import { Dialog } from "~/components/dialog";
-import { DistrictDamageFeatureListItem } from "~/components/feature-list-item";
+import { FeatureListItem } from "~/components/feature-list-item";
+import { useInfrastructureFeatures } from "~/components/infrastructure-provider";
 import { Map, MapHandle } from "~/components/map/map";
 import { RoundIconButton } from "~/components/round-icon-button";
 import SelectedFeatureDetail from "~/components/selected-feature-detail";
@@ -20,15 +21,19 @@ import { configuration } from "~/configuration";
 import { useAllDistrictDamages } from "~/hooks/use-district-damages";
 import { useDistricts } from "~/hooks/use-districts";
 import { useFeatures } from "~/hooks/use-features";
+import { useAllHuntedAnimals } from "~/hooks/use-hunted-animals";
 import { useSelectedDistrictId } from "~/hooks/use-selected-district-id";
 import { logger } from "~/logger";
 import { mapService } from "~/machines/map-machine";
 import { trackPositionMachine } from "~/machines/track-position-machine";
 import { queryClient, queryKeys } from "~/query-client";
 import { theme } from "~/theme";
+import { SpeciesId } from "~/types/classifiers";
 import { DistrictDamage } from "~/types/district-damages";
 import { Feature } from "~/types/features";
 import { SelectedFeature } from "~/types/hunt-map";
+import { HuntedAnimal } from "~/types/hunted-animals";
+import { Infrastructure } from "~/types/infrastructure";
 import { MapService, MapServiceCustomWithFeatures } from "~/types/map";
 
 const JITTER_THRESHOLD = 2;
@@ -37,9 +42,17 @@ type SelectedFeatureData = {
     damages: Array<Feature & { featureType: "damages" }>;
     observations: Array<Feature & { featureType: "observations" }>;
     "district-damages": Array<DistrictDamage & { featureType: "district-damages" }>;
+    "district-hunted-others": Array<HuntedAnimal & { featureType: "district-hunted-others" }>;
+    "district-hunted-red-deer": Array<HuntedAnimal & { featureType: "district-hunted-red-deer" }>;
+    "district-hunted-moose": Array<HuntedAnimal & { featureType: "district-hunted-moose" }>;
+    "district-hunted-roe-deer": Array<HuntedAnimal & { featureType: "district-hunted-roe-deer" }>;
+    "district-hunted-boar": Array<HuntedAnimal & { featureType: "district-hunted-boar" }>;
+    "district-infrastructures": Array<Infrastructure & { featureType: "district-infrastructures" }>;
 };
 
 export function MapScreen() {
+    const infrastructures = useInfrastructureFeatures();
+    const huntedAnimals = useAllHuntedAnimals();
     const { t } = useTranslation();
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
@@ -52,6 +65,42 @@ export function MapScreen() {
     const [selectedFeature, setSelectedFeature] = React.useState<SelectedFeature | null>(null);
     const selectedFeaturesData = selectedFeaturesCluster.reduce(
         (acc, feature, index) => {
+            if (feature.layer === "district-infrastructures") {
+                const f = infrastructures.data.find((feat) => feat.id === feature.id);
+                if (f) {
+                    acc["district-infrastructures"].push({ ...f, featureType: "district-infrastructures" });
+                }
+            }
+            if (feature.layer === "district-hunted-others") {
+                const f = huntedAnimals.data.find((feat) => feat.huntReportId === feature.id);
+                if (f) {
+                    acc["district-hunted-others"].push({ ...f, featureType: "district-hunted-others" });
+                }
+            }
+            if (feature.layer === "district-hunted-red-deer") {
+                const f = huntedAnimals.data.find((feat) => feat.huntReportId === feature.id);
+                if (f) {
+                    acc["district-hunted-red-deer"].push({ ...f, featureType: "district-hunted-red-deer" });
+                }
+            }
+            if (feature.layer === "district-hunted-moose") {
+                const f = huntedAnimals.data.find((feat) => feat.huntReportId === feature.id);
+                if (f) {
+                    acc["district-hunted-moose"].push({ ...f, featureType: "district-hunted-moose" });
+                }
+            }
+            if (feature.layer === "district-hunted-roe-deer") {
+                const f = huntedAnimals.data.find((feat) => feat.huntReportId === feature.id);
+                if (f) {
+                    acc["district-hunted-roe-deer"].push({ ...f, featureType: "district-hunted-roe-deer" });
+                }
+            }
+            if (feature.layer === "district-hunted-boar") {
+                const f = huntedAnimals.data.find((feat) => feat.huntReportId === feature.id);
+                if (f) {
+                    acc["district-hunted-boar"].push({ ...f, featureType: "district-hunted-boar" });
+                }
+            }
             if (feature.layer === "observations") {
                 const f = features[feature.layer].find((feat) => feat.properties.id === feature.id);
                 if (f) {
@@ -76,10 +125,21 @@ export function MapScreen() {
                 acc.damages.sort(featureSort);
                 acc.observations.sort(featureSort);
                 acc["district-damages"].sort(districtDamageSort);
+                acc["district-infrastructures"].sort(districtInfrastructuresSort);
             }
             return acc;
         },
-        { damages: [], observations: [], "district-damages": [] } as SelectedFeatureData
+        {
+            damages: [],
+            observations: [],
+            "district-damages": [],
+            "district-infrastructures": [],
+            "district-hunted-others": [],
+            "district-hunted-red-deer": [],
+            "district-hunted-moose": [],
+            "district-hunted-roe-deer": [],
+            "district-hunted-boar": [],
+        } as SelectedFeatureData
     );
 
     function selectedFeatureData() {
@@ -89,6 +149,18 @@ export function MapScreen() {
         return selectedFeaturesData[selectedFeature?.layer as keyof typeof selectedFeaturesData].find((feat) => {
             if (selectedFeature?.layer === "district-damages") {
                 return (feat as DistrictDamage).id === selectedFeature?.id;
+            } else if (selectedFeature?.layer === "district-infrastructures") {
+                return (feat as Infrastructure).id === selectedFeature?.id;
+            } else if (selectedFeature?.layer === "district-hunted-others") {
+                return (feat as HuntedAnimal).huntReportId === selectedFeature?.id;
+            } else if (selectedFeature?.layer === "district-hunted-red-deer") {
+                return (feat as HuntedAnimal).huntReportId === selectedFeature?.id;
+            } else if (selectedFeature?.layer === "district-hunted-moose") {
+                return (feat as HuntedAnimal).huntReportId === selectedFeature?.id;
+            } else if (selectedFeature?.layer === "district-hunted-roe-deer") {
+                return (feat as HuntedAnimal).huntReportId === selectedFeature?.id;
+            } else if (selectedFeature?.layer === "district-hunted-boar") {
+                return (feat as HuntedAnimal).huntReportId === selectedFeature?.id;
             } else {
                 return (feat as Feature).properties.id === selectedFeature?.id;
             }
@@ -102,6 +174,12 @@ export function MapScreen() {
                 .with("damages", () => t("map.bottomSheet.subtitle.damages"))
                 .with("district-damages", () => t("map.bottomSheet.subtitle.district-damages"))
                 .with("observations", () => t("map.bottomSheet.subtitle.observations"))
+                .with("district-infrastructures", () => t("mtl.infrastructure.districtInfrastructure"))
+                .with("district-hunted-others", () => t("map.bottomSheet.subtitle.districtHuntedAnimals"))
+                .with("district-hunted-red-deer", () => t("map.bottomSheet.subtitle.districtHuntedAnimals"))
+                .with("district-hunted-moose", () => t("map.bottomSheet.subtitle.districtHuntedAnimals"))
+                .with("district-hunted-roe-deer", () => t("map.bottomSheet.subtitle.districtHuntedAnimals"))
+                .with("district-hunted-boar", () => t("map.bottomSheet.subtitle.districtHuntedAnimals"))
                 .exhaustive();
         }
         return t("map.bottomSheet.title");
@@ -233,6 +311,57 @@ export function MapScreen() {
             if (service.id === "district-damages") {
                 acc.push({ ...service, features: districtDamages.features });
             }
+
+            if (service.id === "district-hunted-others") {
+                acc.push({
+                    ...service,
+                    features: huntedAnimals.features.filter(
+                        (animal) =>
+                            ![SpeciesId.RedDeer, SpeciesId.Moose, SpeciesId.RoeDeer, SpeciesId.WildBoar].includes(
+                                animal.properties.speciesId
+                            )
+                    ),
+                });
+            }
+            if (service.id === "district-hunted-red-deer") {
+                acc.push({
+                    ...service,
+                    features: huntedAnimals.features.filter(
+                        (animal) => animal.properties.speciesId === SpeciesId.RedDeer
+                    ),
+                });
+            }
+
+            if (service.id === "district-hunted-moose") {
+                acc.push({
+                    ...service,
+                    features: huntedAnimals.features.filter(
+                        (animal) => animal.properties.speciesId === SpeciesId.Moose
+                    ),
+                });
+            }
+
+            if (service.id === "district-hunted-roe-deer") {
+                acc.push({
+                    ...service,
+                    features: huntedAnimals.features.filter(
+                        (animal) => animal.properties.speciesId === SpeciesId.RoeDeer
+                    ),
+                });
+            }
+
+            if (service.id === "district-hunted-boar") {
+                acc.push({
+                    ...service,
+                    features: huntedAnimals.features.filter(
+                        (animal) => animal.properties.speciesId === SpeciesId.WildBoar
+                    ),
+                });
+            }
+
+            if (service.id === "district-infrastructures") {
+                acc.push({ ...service, features: infrastructures.features });
+            }
             return acc;
         }, [] as MapServiceCustomWithFeatures[]);
 
@@ -244,7 +373,15 @@ export function MapScreen() {
             type: "setFeatures",
             features: newFeatures,
         });
-    }, [features, districtDamages, selectedDistrictId, mapLoaded, selectedFeaturesCluster.length]);
+    }, [
+        features,
+        districtDamages,
+        selectedDistrictId,
+        mapLoaded,
+        selectedFeaturesCluster.length,
+        infrastructures,
+        huntedAnimals,
+    ]);
 
     React.useEffect(() => {
         if (!mapLoaded) {
@@ -389,6 +526,18 @@ export function MapScreen() {
                 return { ...service, features: districts };
             } else if (service.id === "district-damages") {
                 return { ...service, features: districtDamages.features };
+            } else if (service.id === "district-hunted-others") {
+                return { ...service, features: huntedAnimals.features };
+            } else if (service.id === "district-hunted-red-deer") {
+                return { ...service, features: huntedAnimals.features };
+            } else if (service.id === "district-hunted-moose") {
+                return { ...service, features: huntedAnimals.features };
+            } else if (service.id === "district-hunted-roe-deer") {
+                return { ...service, features: huntedAnimals.features };
+            } else if (service.id === "district-hunted-boar") {
+                return { ...service, features: huntedAnimals.features };
+            } else if (service.id === "district-infrastructures") {
+                return { ...service, features: infrastructures.features };
             } else if (service.type === "Custom") {
                 return { ...service, features: features[service.id as keyof typeof features] };
             } else {
@@ -420,7 +569,68 @@ export function MapScreen() {
             setSelectedFeature(() => {
                 return { id, layer };
             });
-            if (layer !== "district-damages") {
+
+            if (layer === "district-infrastructures") {
+                const f = infrastructures.features.find((f) => f.properties.id === id);
+                if (!f) {
+                    logger.error("district-infrastructures feature not found", { layer, id });
+                    return;
+                }
+                mapRef.current?.sendAction({
+                    type: "selectIndividualFeature",
+                    feature: { ...f, featureType: layer as "district-infrastructures" },
+                });
+            } else if (layer === "district-hunted-others") {
+                const f = huntedAnimals.features.find((f) => f.properties.id === id);
+                if (!f) {
+                    logger.error("Selected hunted animal feature not found", { layer, id });
+                    return;
+                }
+                mapRef.current?.sendAction({
+                    type: "selectIndividualFeature",
+                    feature: { ...f, featureType: layer as "district-hunted-others" },
+                });
+            } else if (layer === "district-hunted-red-deer") {
+                const f = huntedAnimals.features.find((f) => f.properties.id === id);
+                if (!f) {
+                    logger.error("Selected hunted red deer feature not found", { layer, id });
+                    return;
+                }
+                mapRef.current?.sendAction({
+                    type: "selectIndividualFeature",
+                    feature: { ...f, featureType: layer as "district-hunted-red-deer" },
+                });
+            } else if (layer === "district-hunted-moose") {
+                const f = huntedAnimals.features.find((f) => f.properties.id === id);
+                if (!f) {
+                    logger.error("Selected hunted moose feature not found", { layer, id });
+                    return;
+                }
+                mapRef.current?.sendAction({
+                    type: "selectIndividualFeature",
+                    feature: { ...f, featureType: layer as "district-hunted-moose" },
+                });
+            } else if (layer === "district-hunted-roe-deer") {
+                const f = huntedAnimals.features.find((f) => f.properties.id === id);
+                if (!f) {
+                    logger.error("Selected hunted roe deer feature not found", { layer, id });
+                    return;
+                }
+                mapRef.current?.sendAction({
+                    type: "selectIndividualFeature",
+                    feature: { ...f, featureType: layer as "district-hunted-roe-deer" },
+                });
+            } else if (layer === "district-hunted-boar") {
+                const f = huntedAnimals.features.find((f) => f.properties.id === id);
+                if (!f) {
+                    logger.error("Selected hunted boar feature not found", { layer, id });
+                    return;
+                }
+                mapRef.current?.sendAction({
+                    type: "selectIndividualFeature",
+                    feature: { ...f, featureType: layer as "district-hunted-boar" },
+                });
+            } else if (layer !== "district-damages") {
                 const f = (features[layer as keyof typeof features] as Feature[]).find((f) => f.properties.id === id);
                 if (!f) {
                     logger.error("Selected feature not found", { layer, id });
@@ -431,11 +641,12 @@ export function MapScreen() {
                     feature: { ...f, featureType: layer as "damages" | "observations" | "district-damages" },
                 });
             } else {
-                const f = districtDamages.features.find((f) => f.properties.featureId === id);
+                const f = districtDamages.features.find((f) => f.properties.id === id);
                 if (!f) {
                     logger.error("Selected feature not found", { layer, id });
                     return;
                 }
+
                 mapRef.current?.sendAction({
                     type: "selectIndividualFeature",
                     feature: { ...f, featureType: "district-damages" },
@@ -451,9 +662,15 @@ export function MapScreen() {
         feature:
             | (Feature & { featureType: "damages" | "observations" })
             | (DistrictDamage & { featureType: "district-damages" })
+            | (Infrastructure & { featureType: "district-infrastructures" })
+            | (HuntedAnimal & { featureType: "district-hunted-others" })
+            | (HuntedAnimal & { featureType: "district-hunted-red-deer" })
+            | (HuntedAnimal & { featureType: "district-hunted-moose" })
+            | (HuntedAnimal & { featureType: "district-hunted-roe-deer" })
+            | (HuntedAnimal & { featureType: "district-hunted-boar" })
     ) {
         if (feature.featureType === "district-damages") {
-            const f = districtDamages.features.find((feat) => feat.properties.featureId === feature.id);
+            const f = districtDamages.features.find((feat) => feat.properties.id === feature.id);
             if (!f) {
                 logger.error("Selected feature not found", { feature });
                 return;
@@ -463,6 +680,72 @@ export function MapScreen() {
                 feature: { ...f, featureType: "district-damages" },
             });
             setSelectedFeature({ id: feature.id, layer: "district-damages" });
+        } else if (feature.featureType === "district-hunted-others") {
+            const f = huntedAnimals.features.find((feat) => feat.properties.id === feature.huntReportId);
+            if (!f) {
+                logger.error("Selected hunted animal feature not found", { feature });
+                return;
+            }
+            mapRef.current?.sendAction({
+                type: "selectIndividualFeature",
+                feature: { ...f, featureType: "district-hunted-others" },
+            });
+            setSelectedFeature({ id: feature.huntReportId, layer: "district-hunted-others" });
+        } else if (feature.featureType === "district-hunted-red-deer") {
+            const f = huntedAnimals.features.find((feat) => feat.properties.id === feature.huntReportId);
+            if (!f) {
+                logger.error("Selected hunted red deer feature not found", { feature });
+                return;
+            }
+            mapRef.current?.sendAction({
+                type: "selectIndividualFeature",
+                feature: { ...f, featureType: "district-hunted-red-deer" },
+            });
+            setSelectedFeature({ id: feature.huntReportId, layer: "district-hunted-red-deer" });
+        } else if (feature.featureType === "district-hunted-moose") {
+            const f = huntedAnimals.features.find((feat) => feat.properties.id === feature.huntReportId);
+            if (!f) {
+                logger.error("Selected hunted moose feature not found", { feature });
+                return;
+            }
+            mapRef.current?.sendAction({
+                type: "selectIndividualFeature",
+                feature: { ...f, featureType: "district-hunted-moose" },
+            });
+            setSelectedFeature({ id: feature.huntReportId, layer: "district-hunted-moose" });
+        } else if (feature.featureType === "district-hunted-roe-deer") {
+            const f = huntedAnimals.features.find((feat) => feat.properties.id === feature.huntReportId);
+            if (!f) {
+                logger.error("Selected hunted roe deer feature not found", { feature });
+                return;
+            }
+            mapRef.current?.sendAction({
+                type: "selectIndividualFeature",
+                feature: { ...f, featureType: "district-hunted-roe-deer" },
+            });
+            setSelectedFeature({ id: feature.huntReportId, layer: "district-hunted-roe-deer" });
+        } else if (feature.featureType === "district-hunted-boar") {
+            const f = huntedAnimals.features.find((feat) => feat.properties.id === feature.huntReportId);
+            if (!f) {
+                logger.error("Selected hunted boar feature not found", { feature });
+                return;
+            }
+            mapRef.current?.sendAction({
+                type: "selectIndividualFeature",
+                feature: { ...f, featureType: "district-hunted-boar" },
+            });
+            setSelectedFeature({ id: feature.huntReportId, layer: "district-hunted-boar" });
+        } else if (feature.featureType === "district-infrastructures") {
+            const f = infrastructures.features.find((feat) => feat.properties.id === feature.id);
+            if (!f) {
+                logger.error("district-infrastructures feature not found", { feature });
+                return;
+            }
+            mapRef.current?.sendAction({
+                type: "selectIndividualFeature",
+                feature: { ...f, featureType: "district-infrastructures" },
+            });
+            setSelectedFeature({ id: feature.id, layer: "district-infrastructures" });
         } else {
             mapRef.current?.sendAction({ type: "selectIndividualFeature", feature });
             setSelectedFeature({ id: feature.properties.id, layer: feature.featureType });
@@ -542,13 +825,143 @@ export function MapScreen() {
                                     style={styles.listSpacing}
                                 >
                                     {selectedFeaturesData["district-damages"]?.map((feature) => (
-                                        <DistrictDamageFeatureListItem
+                                        <FeatureListItem
                                             feature={{ ...feature, featureType: "district-damages" }}
                                             key={feature.id}
                                             onPress={() =>
                                                 onSelectIndividualFeature({
                                                     ...feature,
                                                     featureType: "district-damages",
+                                                })
+                                            }
+                                        />
+                                    ))}
+                                </Collapsible>
+                            ) : null}
+
+                            {selectedFeaturesData["district-hunted-red-deer"].length ? (
+                                <Collapsible
+                                    title={t("map.settings.layers.huntedAnimals.redDeer")}
+                                    badgeCount={selectedFeaturesData["district-hunted-red-deer"].length}
+                                    defaultCollapsed={false}
+                                    style={styles.listSpacing}
+                                >
+                                    {selectedFeaturesData["district-hunted-red-deer"]?.map((feature) => (
+                                        <FeatureListItem
+                                            feature={{ ...feature, featureType: "district-hunted-red-deer" }}
+                                            key={feature.huntReportId}
+                                            onPress={() =>
+                                                onSelectIndividualFeature({
+                                                    ...feature,
+                                                    featureType: "district-hunted-red-deer",
+                                                })
+                                            }
+                                        />
+                                    ))}
+                                </Collapsible>
+                            ) : null}
+
+                            {selectedFeaturesData["district-hunted-moose"].length ? (
+                                <Collapsible
+                                    title={t("map.settings.layers.huntedAnimals.moose")}
+                                    badgeCount={selectedFeaturesData["district-hunted-moose"].length}
+                                    defaultCollapsed={false}
+                                    style={styles.listSpacing}
+                                >
+                                    {selectedFeaturesData["district-hunted-moose"]?.map((feature) => (
+                                        <FeatureListItem
+                                            feature={{ ...feature, featureType: "district-hunted-moose" }}
+                                            key={feature.huntReportId}
+                                            onPress={() =>
+                                                onSelectIndividualFeature({
+                                                    ...feature,
+                                                    featureType: "district-hunted-moose",
+                                                })
+                                            }
+                                        />
+                                    ))}
+                                </Collapsible>
+                            ) : null}
+                            {selectedFeaturesData["district-hunted-roe-deer"].length ? (
+                                <Collapsible
+                                    title={t("map.settings.layers.huntedAnimals.roeDeer")}
+                                    badgeCount={selectedFeaturesData["district-hunted-roe-deer"].length}
+                                    defaultCollapsed={false}
+                                    style={styles.listSpacing}
+                                >
+                                    {selectedFeaturesData["district-hunted-roe-deer"]?.map((feature) => (
+                                        <FeatureListItem
+                                            feature={{ ...feature, featureType: "district-hunted-roe-deer" }}
+                                            key={feature.huntReportId}
+                                            onPress={() =>
+                                                onSelectIndividualFeature({
+                                                    ...feature,
+                                                    featureType: "district-hunted-roe-deer",
+                                                })
+                                            }
+                                        />
+                                    ))}
+                                </Collapsible>
+                            ) : null}
+                            {selectedFeaturesData["district-hunted-boar"].length ? (
+                                <Collapsible
+                                    title={t("map.settings.layers.huntedAnimals.wildBoar")}
+                                    badgeCount={selectedFeaturesData["district-hunted-boar"].length}
+                                    defaultCollapsed={false}
+                                    style={styles.listSpacing}
+                                >
+                                    {selectedFeaturesData["district-hunted-boar"]?.map((feature) => (
+                                        <FeatureListItem
+                                            feature={{ ...feature, featureType: "district-hunted-boar" }}
+                                            key={feature.huntReportId}
+                                            onPress={() =>
+                                                onSelectIndividualFeature({
+                                                    ...feature,
+                                                    featureType: "district-hunted-boar",
+                                                })
+                                            }
+                                        />
+                                    ))}
+                                </Collapsible>
+                            ) : null}
+
+                            {selectedFeaturesData["district-hunted-others"].length ? (
+                                <Collapsible
+                                    title={t("map.settings.layers.huntedAnimals.others")}
+                                    badgeCount={selectedFeaturesData["district-hunted-others"].length}
+                                    defaultCollapsed={false}
+                                    style={styles.listSpacing}
+                                >
+                                    {selectedFeaturesData["district-hunted-others"]?.map((feature) => (
+                                        <FeatureListItem
+                                            feature={{ ...feature, featureType: "district-hunted-others" }}
+                                            key={feature.huntReportId}
+                                            onPress={() =>
+                                                onSelectIndividualFeature({
+                                                    ...feature,
+                                                    featureType: "district-hunted-others",
+                                                })
+                                            }
+                                        />
+                                    ))}
+                                </Collapsible>
+                            ) : null}
+
+                            {selectedFeaturesData["district-infrastructures"].length ? (
+                                <Collapsible
+                                    title={t("mtl.infrastructure.inDistricts")}
+                                    badgeCount={selectedFeaturesData["district-infrastructures"].length}
+                                    defaultCollapsed={false}
+                                    style={styles.listSpacing}
+                                >
+                                    {selectedFeaturesData["district-infrastructures"]?.map((feature) => (
+                                        <FeatureListItem
+                                            feature={{ ...feature, featureType: "district-infrastructures" }}
+                                            key={feature.guid}
+                                            onPress={() =>
+                                                onSelectIndividualFeature({
+                                                    ...feature,
+                                                    featureType: "district-infrastructures",
                                                 })
                                             }
                                         />
@@ -564,7 +977,7 @@ export function MapScreen() {
                                     style={styles.listSpacing}
                                 >
                                     {selectedFeaturesData.damages?.map((feature) => (
-                                        <DistrictDamageFeatureListItem
+                                        <FeatureListItem
                                             feature={{ ...feature, featureType: "damages" }}
                                             key={feature.properties.id}
                                             onPress={() =>
@@ -582,7 +995,7 @@ export function MapScreen() {
                                     style={styles.listSpacing}
                                 >
                                     {selectedFeaturesData.observations?.map((feature) => (
-                                        <DistrictDamageFeatureListItem
+                                        <FeatureListItem
                                             feature={{ ...feature, featureType: "observations" }}
                                             key={feature.properties.id}
                                             onPress={() =>
@@ -662,4 +1075,8 @@ function featureSort(a: Feature, b: Feature) {
 
 function districtDamageSort(a: DistrictDamage, b: DistrictDamage) {
     return new Date(b.vmdAcceptedOn).getTime() - new Date(a.vmdAcceptedOn).getTime();
+}
+
+function districtInfrastructuresSort(a: Infrastructure, b: Infrastructure) {
+    return new Date(b.createdOnDevice).getTime() - new Date(a.createdOnDevice).getTime();
 }

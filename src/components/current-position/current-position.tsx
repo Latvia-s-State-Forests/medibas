@@ -6,6 +6,7 @@ import { CurrentPositionIdle } from "~/components/current-position/current-posit
 import { CurrentPositionLoading } from "~/components/current-position/current-position-loading";
 import { currentPositionMachine } from "~/components/current-position/current-position-machine";
 import { CurrentPositionPermissionsError } from "~/components/current-position/current-position-permissions-error";
+import { useConfig } from "~/hooks/use-config";
 import { PositionResult } from "~/types/position-result";
 
 export type CurrentPositionHandle = {
@@ -19,9 +20,11 @@ type CurrentPositionProps = {
 
 export const CurrentPosition = React.forwardRef<CurrentPositionHandle, CurrentPositionProps>(
     ({ initialPosition, onChange }, ref) => {
+        const config = useConfig();
         const [state, send] = useMachine(() => currentPositionMachine, {
             context: {
                 position: initialPosition,
+                config,
             },
             actions: {
                 notifyPosition: (context) => onChange(context.position),

@@ -35,16 +35,40 @@ export function PositionSelectExampleScreen() {
                     },
                 ]}
             >
-                <Text>Select position</Text>
+                <Text>Select position for driven hunt</Text>
                 <Spacer size={8} />
                 <View style={styles.map}>
-                    <PositionSelect onMark={onSelectPosition} position={selectedPosition} />
+                    <PositionSelect positionType="drivenHunt" onMark={onSelectPosition} position={selectedPosition} />
+                </View>
+                <Spacer size={16} />
+                <Text>Select position for individual hunt</Text>
+                <Spacer size={8} />
+                <View style={styles.map}>
+                    <PositionSelect
+                        positionType="individualHunt"
+                        onMark={onSelectPosition}
+                        position={selectedPosition}
+                    />
+                </View>
+                <Spacer size={16} />
+                <Text>Select position for infrastructure</Text>
+                <Spacer size={8} />
+                <View style={styles.map}>
+                    <PositionSelect
+                        positionType="infrastructure"
+                        onMark={onSelectPosition}
+                        position={selectedPosition}
+                    />
                 </View>
                 <Spacer size={16} />
                 <Text>Position selected</Text>
                 <Spacer size={8} />
                 <View style={styles.map}>
-                    <PositionSelect onMark={onSelectSecondPosition} position={selectSecondPosition} />
+                    <PositionSelect
+                        positionType="drivenHunt"
+                        onMark={onSelectSecondPosition}
+                        position={selectSecondPosition}
+                    />
                 </View>
             </ScrollView>
         </View>

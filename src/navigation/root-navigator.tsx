@@ -22,6 +22,10 @@ import { LimitedPreyScreen } from "~/screens/hunt/limited-prey-screen";
 import { LimitedPreySubspeciesScreen } from "~/screens/hunt/limited-prey-subspecies-screen";
 import { RegisterPreyScreen } from "~/screens/hunt/register-prey-screen";
 import { UnlimitedPreyScreen } from "~/screens/hunt/unlimited-prey-screen";
+import { DistrictInfrastructureChangesListScreen } from "~/screens/infrastructure/district-infrastructure-changes-list-screen";
+import { DistrictInfrastructureDetailScreen } from "~/screens/infrastructure/district-infrastructure-detail-screen";
+import { DistrictInfrastructureFormScreen } from "~/screens/infrastructure/district-infrastructure-form-screen";
+import { DistrictInfrastructureListScreen } from "~/screens/infrastructure/district-infrastructure-list-screen";
 import { LicenseDetailScreen } from "~/screens/license-detail-screen";
 import { LicenseListScreen } from "~/screens/license-list-screen";
 import { MapSettingsModal } from "~/screens/map/map-settings-modal";
@@ -120,6 +124,22 @@ export function RootNavigator() {
                     <>
                         <RootStack.Screen name="PermitsScreen" component={PermitsScreen} />
                         <RootStack.Screen name="PermitDistributionScreen" component={PermitDistributionScreen} />
+                        <RootStack.Screen
+                            name="DistrictInfrastructureChangesListScreen"
+                            component={DistrictInfrastructureChangesListScreen}
+                        />
+                        <RootStack.Screen
+                            name="DistrictInfrastructureDetailScreen"
+                            component={DistrictInfrastructureDetailScreen}
+                        />
+                        <RootStack.Screen
+                            name="DistrictInfrastructureFormScreen"
+                            component={DistrictInfrastructureFormScreen}
+                        />
+                        <RootStack.Screen
+                            name="DistrictInfrastructureListScreen"
+                            component={DistrictInfrastructureListScreen}
+                        />
                         {permissions.viewDistrictDamages ? (
                             <>
                                 <RootStack.Screen

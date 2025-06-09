@@ -1,5 +1,5 @@
 import { useInterpret } from "@xstate/react";
-import { addDays } from "date-fns";
+import { addDays, endOfDay } from "date-fns";
 import * as Crypto from "expo-crypto";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
@@ -9,7 +9,9 @@ import { Button } from "~/components/button";
 import { CheckboxList } from "~/components/checkbox-button-list";
 import { DateInput } from "~/components/date-input";
 import { ErrorMessage } from "~/components/error-message";
+import { FieldLabel } from "~/components/field-label";
 import { Input } from "~/components/input";
+import { PositionSelect } from "~/components/map/position-select";
 import { MultiSelect } from "~/components/multi-select";
 import { ReadOnlyField } from "~/components/read-only-field";
 import { Select } from "~/components/select";
@@ -21,6 +23,7 @@ import {
     addIndividualHuntMachine,
     AddIndividualHuntStatusDialog,
 } from "~/screens/hunt/individual-hunt/add-individual-hunt-machine";
+import { theme } from "~/theme";
 import { SpeciesId } from "~/types/classifiers";
 import { Hunt, HuntEventType, HuntPlace } from "~/types/hunts";
 import { getEquipmentStatus } from "~/utils/individual-hunt-equipment";
@@ -36,6 +39,7 @@ export type IndividualHuntFormState = {
     district: number | null;
     plannedFromDate?: Date;
     plannedToDate?: Date;
+    selectedPosition: GeoJSON.Position | null;
     species: string;
     equipment: Equipment[];
     propertyName: string;
@@ -48,6 +52,7 @@ function getDefaultAddIndividualHuntFormState(): IndividualHuntFormState {
     return {
         notes: "",
         district: null,
+        selectedPosition: null,
         species: "",
         equipment: [],
         propertyName: "",
@@ -76,9 +81,15 @@ function getDefaultEditIndividualHuntFormState(hunt: Hunt): IndividualHuntFormSt
 
     const hasEquipment = equipment.length !== 0;
 
+    const alreadySelectedPosition =
+        hunt.meetingPointX !== undefined && hunt.meetingPointY !== undefined
+            ? ([hunt.meetingPointX, hunt.meetingPointY] as GeoJSON.Position)
+            : null;
+
     return {
         notes: hunt.notes ?? "",
         district: hunt.districts?.[0]?.id ?? null,
+        selectedPosition: alreadySelectedPosition,
         plannedFromDate: new Date(hunt.plannedFrom),
         plannedToDate: new Date(hunt.plannedTo),
         species: "",
@@ -109,7 +120,6 @@ export function IndividualHuntForm(props: IndividualHuntFormProps) {
     function onNotesChange(value: string) {
         setIndividualHunt((prevState) => ({ ...prevState, notes: value }));
     }
-
     const hasEquipment = individualHunt.equipment.length > 0;
     const plannedSpeciesOptions = React.useMemo(() => {
         const appLanguage = getAppLanguage();
@@ -150,6 +160,10 @@ export function IndividualHuntForm(props: IndividualHuntFormProps) {
 
     function onPlannedToDateChange(date: Date | undefined) {
         setIndividualHunt((prevState) => ({ ...prevState, plannedToDate: date }));
+    }
+
+    function onSelectPosition(position: GeoJSON.Position) {
+        setIndividualHunt((prevState) => ({ ...prevState, selectedPosition: position }));
     }
 
     function onEquipmentChange(equipment: Equipment[]) {
@@ -215,7 +229,13 @@ export function IndividualHuntForm(props: IndividualHuntFormProps) {
             payload: {
                 id: hunt ? hunt.id : undefined,
                 plannedFrom: individualHunt.plannedFromDate.toISOString(),
-                plannedTo: individualHunt.plannedToDate.toISOString(),
+                plannedTo: endOfDay(individualHunt.plannedToDate).toISOString(),
+                meetingPoint: individualHunt.selectedPosition
+                    ? {
+                          x: individualHunt.selectedPosition[0],
+                          y: individualHunt.selectedPosition[1],
+                      }
+                    : undefined,
                 huntEventTypeId: HuntEventType.IndividualHunt,
                 huntEventPlaceId: huntPlace,
                 propertyName: isInWaterBody ? individualHunt.propertyName : "",
@@ -322,7 +342,16 @@ export function IndividualHuntForm(props: IndividualHuntFormProps) {
                     onChange={onPlannedToDateChange}
                 />
                 <Spacer size={16} />
-
+                <FieldLabel label={t("hunt.individualHunt.huntPlace")} />
+                <Spacer size={16} />
+                <View style={styles.map}>
+                    <PositionSelect
+                        positionType="individualHunt"
+                        onMark={onSelectPosition}
+                        position={individualHunt.selectedPosition}
+                    />
+                </View>
+                <Spacer size={16} />
                 {huntPlace === HuntPlace.WaterBody ? (
                     <>
                         <ReadOnlyField
@@ -404,5 +433,10 @@ export function IndividualHuntForm(props: IndividualHuntFormProps) {
 const styles = StyleSheet.create({
     validationErrorMessages: {
         gap: 19,
+    },
+    map: {
+        backgroundColor: theme.color.gray3,
+        borderRadius: 8,
+        overflow: "hidden",
     },
 });

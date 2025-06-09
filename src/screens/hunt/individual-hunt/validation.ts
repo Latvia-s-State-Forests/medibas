@@ -9,6 +9,7 @@ function getErrorMessage(fieldName: string): string {
 export function getSubmitIndividualHuntValidationErrors({
     plannedFromDate,
     plannedToDate,
+    selectedPosition,
     district,
     huntPlace,
     propertyName,
@@ -32,6 +33,10 @@ export function getSubmitIndividualHuntValidationErrors({
 
     if (plannedFromDate && !plannedToDate) {
         errors.push(getErrorMessage(i18n.t("hunt.individualHunt.date.endDate")));
+    }
+
+    if (!selectedPosition) {
+        errors.push(getErrorMessage(i18n.t("hunt.individualHunt.huntPlace")));
     }
 
     if (huntPlace !== HuntPlace.WaterBody && !hasEquipment && selectedSpeciesList.length === 0) {

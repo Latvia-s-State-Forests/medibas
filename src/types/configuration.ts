@@ -5,6 +5,7 @@ import {
     DamageVolumeTypeId,
     DeathTypeId,
     GenderId,
+    HuntingInfrastructureTypeId,
     InfrastructureDamageTypeId,
     MainAgriculturalLandType,
     MainObservationSpecies,
@@ -64,6 +65,11 @@ interface DamageConfiguration {
         defaultType?: InfrastructureDamageTypeId;
         defaultResponsibleSpecies?: SpeciesId;
     };
+}
+
+interface HuntingInfrastructureConfiguration {
+    typeIcons: Record<HuntingInfrastructureTypeId, IconName<32>>;
+    daysToKeepChangesFor: number;
 }
 
 interface HuntConfiguration {
@@ -137,23 +143,6 @@ interface DistrictDamagesConfiguration {
     daysToKeepEntriesFor: number;
 }
 
-interface CurrentPositionConfiguration {
-    /**
-     * Minimum accuracy in meters
-     */
-    minAccuracy: number;
-
-    /**
-     * Maximum age in milliseconds
-     */
-    maxAge: number;
-
-    /**
-     * Milliseconds after which position watch will be stopped
-     */
-    timeout: number;
-}
-
 interface ReachabilityConfiguration {
     /**
      * URL to ping
@@ -182,12 +171,12 @@ export interface Configuration {
     pin: PinConfiguration;
     support: SupportConfiguration;
     damage: DamageConfiguration;
+    huntingInfrastructure: HuntingInfrastructureConfiguration;
     reports: ReportsConfiguration;
     districtDamages: DistrictDamagesConfiguration;
     hunt: HuntConfiguration;
     map: MapConfiguration;
     mtl: MtlConfiguration;
     observations: ObservationsConfiguration;
-    currentPosition: CurrentPositionConfiguration;
     reachability: ReachabilityConfiguration;
 }
