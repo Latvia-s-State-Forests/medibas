@@ -301,6 +301,7 @@ export function DrivenHuntFormScreen({ route }: DrivenHuntFormScreenProps) {
                         positionType="drivenHunt"
                         onMark={onSelectPosition}
                         position={drivenHunt.selectedPosition}
+                        activeDistrictId={undefined}
                     />
                 </View>
                 <Spacer size={16} />

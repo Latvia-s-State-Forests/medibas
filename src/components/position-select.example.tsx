@@ -2,6 +2,7 @@ import * as React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Header } from "~/components/header";
+import { useSelectedDistrictId } from "~/hooks/use-selected-district-id";
 import { theme } from "~/theme";
 import { PositionSelect } from "./map/position-select";
 import { Spacer } from "./spacer";
@@ -13,6 +14,7 @@ export function PositionSelectExampleScreen() {
     const [selectSecondPosition, setSelectedSecondPosition] = React.useState<GeoJSON.Position | null>([
         25.17301313472615, 56.958195067711245,
     ]);
+    const [selectedDistrictId] = useSelectedDistrictId();
 
     function onSelectPosition(position: GeoJSON.Position) {
         setSelectedPosition(position);
@@ -38,7 +40,12 @@ export function PositionSelectExampleScreen() {
                 <Text>Select position for driven hunt</Text>
                 <Spacer size={8} />
                 <View style={styles.map}>
-                    <PositionSelect positionType="drivenHunt" onMark={onSelectPosition} position={selectedPosition} />
+                    <PositionSelect
+                        positionType="drivenHunt"
+                        onMark={onSelectPosition}
+                        position={selectedPosition}
+                        activeDistrictId={selectedDistrictId}
+                    />
                 </View>
                 <Spacer size={16} />
                 <Text>Select position for individual hunt</Text>
@@ -48,6 +55,7 @@ export function PositionSelectExampleScreen() {
                         positionType="individualHunt"
                         onMark={onSelectPosition}
                         position={selectedPosition}
+                        activeDistrictId={selectedDistrictId}
                     />
                 </View>
                 <Spacer size={16} />
@@ -58,6 +66,7 @@ export function PositionSelectExampleScreen() {
                         positionType="infrastructure"
                         onMark={onSelectPosition}
                         position={selectedPosition}
+                        activeDistrictId={selectedDistrictId}
                     />
                 </View>
                 <Spacer size={16} />
@@ -68,6 +77,7 @@ export function PositionSelectExampleScreen() {
                         positionType="drivenHunt"
                         onMark={onSelectSecondPosition}
                         position={selectSecondPosition}
+                        activeDistrictId={selectedDistrictId}
                     />
                 </View>
             </ScrollView>

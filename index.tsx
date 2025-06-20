@@ -1,6 +1,7 @@
 import "intl-pluralrules";
 import NetInfo from "@react-native-community/netinfo";
 import { registerRootComponent } from "expo";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import App from "~/app";
 import { InitialUrlProvider } from "~/components/initial-url-provider";
@@ -18,13 +19,15 @@ NetInfo.configure({
 
 function AppComponent() {
     return (
-        <QueryProvider>
-            <SafeAreaProvider>
-                <InitialUrlProvider>
-                    <App />
-                </InitialUrlProvider>
-            </SafeAreaProvider>
-        </QueryProvider>
+        <KeyboardProvider>
+            <QueryProvider>
+                <SafeAreaProvider>
+                    <InitialUrlProvider>
+                        <App />
+                    </InitialUrlProvider>
+                </SafeAreaProvider>
+            </QueryProvider>
+        </KeyboardProvider>
     );
 }
 

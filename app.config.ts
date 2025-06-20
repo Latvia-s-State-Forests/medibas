@@ -1,8 +1,8 @@
 import { ExpoConfig } from "expo/config";
 
-const VERSION = "3.2.0";
-const IOS_BUILD_NUMBER = "6";
-const ANDROID_VERSION_CODE = 1518;
+const VERSION = "3.2.1";
+const IOS_BUILD_NUMBER = "1";
+const ANDROID_VERSION_CODE = 1519;
 
 export default (): ExpoConfig => {
     const config: ExpoConfig = {

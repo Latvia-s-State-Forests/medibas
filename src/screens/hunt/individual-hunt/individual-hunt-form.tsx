@@ -349,6 +349,7 @@ export function IndividualHuntForm(props: IndividualHuntFormProps) {
                         positionType="individualHunt"
                         onMark={onSelectPosition}
                         position={individualHunt.selectedPosition}
+                        activeDistrictId={individualHunt.district ?? undefined}
                     />
                 </View>
                 <Spacer size={16} />

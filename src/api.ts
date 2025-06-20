@@ -359,6 +359,10 @@ class Api {
         return this.request({
             method: "POST",
             path: `/connect/vmd/${vmdToken}`,
+            body: {},
+            headers: {
+                "Content-Type": "application/json",
+            },
         });
     }
 
@@ -408,13 +412,6 @@ class Api {
             method: "GET",
             path: `/hunts/${guid}`,
             schema: huntEventSchema,
-        });
-    }
-
-    public async changeDrivenHuntStatus(eventId: number, statusId: number) {
-        return this.request({
-            method: "POST",
-            path: `/hunts/${eventId}/${statusId}`,
         });
     }
 

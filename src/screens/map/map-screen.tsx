@@ -315,11 +315,10 @@ export function MapScreen() {
             if (service.id === "district-hunted-others") {
                 acc.push({
                     ...service,
-                    features: huntedAnimals.features.filter(
-                        (animal) =>
-                            ![SpeciesId.RedDeer, SpeciesId.Moose, SpeciesId.RoeDeer, SpeciesId.WildBoar].includes(
-                                animal.properties.speciesId
-                            )
+                    features: huntedAnimals.features.filter((animal) =>
+                        [SpeciesId.Wolf, SpeciesId.WesternCapercaillie, SpeciesId.BlackGrouse].includes(
+                            animal.properties.speciesId
+                        )
                     ),
                 });
             }

@@ -150,7 +150,13 @@ export const vmdConnectMachine = createMachine(
                     url.searchParams.set("accessToken", event.accessToken);
                     url.searchParams.set("authToken", event.authToken);
 
-                    const request = await fetch(url.toString(), { method: "POST" });
+                    const request = await fetch(url.toString(), {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: "{}",
+                    });
 
                     if (!request.ok) {
                         logger.error("Failed to get exchange vmd token", request.status, await request.text());

@@ -2,7 +2,8 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { randomUUID } from "expo-crypto";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "~/components/button";
 import { ErrorMessage } from "~/components/error-message";
@@ -111,7 +112,7 @@ export function DistrictInfrastructureFormScreen({ route, navigation }: District
     return (
         <View style={styles.container}>
             <Header title={infrastructureToEdit ? t("mtl.infrastructure.edit") : t("mtl.infrastructure.add")} />
-            <ScrollView
+            <KeyboardAwareScrollView
                 contentContainerStyle={[
                     styles.body,
                     {
@@ -120,6 +121,7 @@ export function DistrictInfrastructureFormScreen({ route, navigation }: District
                         paddingBottom: insets.bottom + 24,
                     },
                 ]}
+                bottomOffset={Platform.select({ ios: 24, android: 48 })}
             >
                 <View style={styles.formContentContainer}>
                     <FieldLabel label={t("mtl.infrastructure.location")} />
@@ -129,6 +131,7 @@ export function DistrictInfrastructureFormScreen({ route, navigation }: District
                             positionType="infrastructure"
                             onMark={onSelectPosition}
                             position={selectedPosition}
+                            activeDistrictId={district}
                         />
                     </View>
                     {selectedPosition[0] !== 0 || selectedPosition[1] !== 0 ? (
@@ -180,7 +183,7 @@ export function DistrictInfrastructureFormScreen({ route, navigation }: District
                     </>
                 ) : null}
                 <Button disabled={hasValidationErrors} onPress={onSubmit} title={t("general.saveAndSend")} />
-            </ScrollView>
+            </KeyboardAwareScrollView>
         </View>
     );
 }

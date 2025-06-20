@@ -69,7 +69,7 @@
         "react-native": "0.76.9",
         "react-native-gesture-handler": "~2.20.2",
         "react-native-image-picker": "^7.2.3",
-        "react-native-keyboard-aware-scroll-view": "^0.9.5",
+        "react-native-keyboard-controller": "^1.17.4",
         "react-native-mmkv": "^2.12.2",
         "react-native-modal": "^13.0.1",
         "react-native-qrcode-svg": "^6.3.1",
