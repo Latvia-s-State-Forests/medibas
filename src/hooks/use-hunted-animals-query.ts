@@ -8,15 +8,20 @@ import { HuntedAnimal } from "~/types/hunted-animals";
 export function useHuntedAnimalsQuery(enabled: boolean = false) {
     const userStorage = useUserStorage();
 
-    return useQuery<HuntedAnimal[]>(queryKeys.huntedAnimals, () => api.getHuntedAnimals(), {
-        initialData: userStorage.getHuntedAnimals(),
-        onSuccess: (huntedAnimals) => {
-            logger.log("Hunted animals loaded");
-            userStorage.setHuntedAnimals(huntedAnimals);
+    return useQuery<HuntedAnimal[]>({
+        queryKey: queryKeys.huntedAnimals,
+        queryFn: async () => {
+            try {
+                const huntedAnimals = await api.getHuntedAnimals();
+                logger.log("Hunted animals loaded");
+                userStorage.setHuntedAnimals(huntedAnimals);
+                return huntedAnimals;
+            } catch (error) {
+                logger.error("Failed to load hunted animals", error);
+                throw error;
+            }
         },
-        onError: (error) => {
-            logger.error("Failed to load hunted animals", error);
-        },
+        initialData: () => userStorage.getHuntedAnimals(),
         enabled,
     });
 }

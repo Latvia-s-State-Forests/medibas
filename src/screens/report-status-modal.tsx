@@ -93,7 +93,7 @@ export function ReportStatusModal(props: ReportStatusModalProps) {
                     }
 
                     return errorMessage ?? defaultErrorMessage;
-                } catch (error) {
+                } catch {
                     return defaultErrorMessage;
                 }
             })

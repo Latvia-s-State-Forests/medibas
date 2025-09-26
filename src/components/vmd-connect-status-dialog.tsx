@@ -2,17 +2,16 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { match } from "ts-pattern";
 import { ActorRefFrom } from "xstate";
-import { logger } from "~/logger";
 import { vmdConnectMachine } from "~/machines/vmd-machine";
 import { Button } from "./button";
 import { Dialog } from "./dialog";
 import { Spinner } from "./spinner";
 
 type VmdConnectStatusDialogProps = {
-    service: ActorRefFrom<typeof vmdConnectMachine>;
+    actor: ActorRefFrom<typeof vmdConnectMachine>;
 };
 
-export function VmdConnectStatusDialog({ service }: VmdConnectStatusDialogProps) {
+export function VmdConnectStatusDialog({ actor }: VmdConnectStatusDialogProps) {
     const { t } = useTranslation();
     const [visible, setVisible] = React.useState(false);
     const [status, setStatus] = React.useState<"loading" | "updating" | "success" | "updateFailure" | "otherFailure">(
@@ -20,16 +19,7 @@ export function VmdConnectStatusDialog({ service }: VmdConnectStatusDialogProps)
     );
 
     React.useEffect(() => {
-        const subscription = service.subscribe((state) => {
-            const message = "🌲 " + JSON.stringify(state.value) + " " + JSON.stringify(state.event.type);
-            logger.log(message);
-        });
-
-        return () => subscription.unsubscribe();
-    }, [service]);
-
-    React.useEffect(() => {
-        const subscription = service.subscribe((state) => {
+        const subscription = actor.subscribe((state) => {
             if (state.matches("exchanging") || state.matches("connecting")) {
                 setVisible(true);
                 setStatus("loading");
@@ -51,7 +41,7 @@ export function VmdConnectStatusDialog({ service }: VmdConnectStatusDialogProps)
         });
 
         return () => subscription.unsubscribe();
-    }, [service]);
+    }, [actor]);
 
     return match(status)
         .with("loading", () => <Dialog visible={visible} icon={<Spinner />} title={t("vmdConnect.connecting.title")} />)
@@ -65,15 +55,18 @@ export function VmdConnectStatusDialog({ service }: VmdConnectStatusDialogProps)
                 description={t("vmdConnect.updateFailure.description")}
                 buttons={
                     <>
-                        <Button title={t("vmdConnect.updateFailure.retry")} onPress={() => service.send("RETRY")} />
+                        <Button
+                            title={t("vmdConnect.updateFailure.retry")}
+                            onPress={() => actor.send({ type: "RETRY" })}
+                        />
                         <Button
                             title={t("vmdConnect.updateFailure.cancel")}
-                            onPress={() => service.send("CANCEL")}
+                            onPress={() => actor.send({ type: "CANCEL" })}
                             variant="secondary-outlined"
                         />
                     </>
                 }
-                onBackButtonPress={() => service.send("CANCEL")}
+                onBackButtonPress={() => actor.send({ type: "CANCEL" })}
             />
         ))
         .with("otherFailure", () => (
@@ -83,15 +76,18 @@ export function VmdConnectStatusDialog({ service }: VmdConnectStatusDialogProps)
                 title={t("vmdConnect.otherFailure.title")}
                 buttons={
                     <>
-                        <Button title={t("vmdConnect.otherFailure.retry")} onPress={() => service.send("RETRY")} />
+                        <Button
+                            title={t("vmdConnect.otherFailure.retry")}
+                            onPress={() => actor.send({ type: "RETRY" })}
+                        />
                         <Button
                             title={t("vmdConnect.otherFailure.cancel")}
-                            onPress={() => service.send("CANCEL")}
+                            onPress={() => actor.send({ type: "CANCEL" })}
                             variant="secondary-outlined"
                         />
                     </>
                 }
-                onBackButtonPress={() => service.send("CANCEL")}
+                onBackButtonPress={() => actor.send({ type: "CANCEL" })}
             />
         ))
         .exhaustive();

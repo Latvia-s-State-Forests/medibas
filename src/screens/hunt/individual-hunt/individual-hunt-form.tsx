@@ -1,4 +1,4 @@
-import { useInterpret } from "@xstate/react";
+import { useActorRef } from "@xstate/react";
 import { addDays, endOfDay } from "date-fns";
 import * as Crypto from "expo-crypto";
 import * as React from "react";
@@ -16,9 +16,11 @@ import { MultiSelect } from "~/components/multi-select";
 import { ReadOnlyField } from "~/components/read-only-field";
 import { Select } from "~/components/select";
 import { Spacer } from "~/components/spacer";
+import { Switch } from "~/components/switch";
 import { useClassifiers } from "~/hooks/use-classifiers";
 import { useProfile } from "~/hooks/use-profile";
 import { getAppLanguage } from "~/i18n";
+import { logger } from "~/logger";
 import {
     addIndividualHuntMachine,
     AddIndividualHuntStatusDialog,
@@ -46,12 +48,13 @@ export type IndividualHuntFormState = {
     selectedSpeciesList: HuntSpecies[];
     selectedSpeciesWithEquipmentList: HuntSpecies[];
     dogs: HuntDog[];
+    huntAllSpecies: boolean;
 };
 
-function getDefaultAddIndividualHuntFormState(): IndividualHuntFormState {
+function getDefaultAddIndividualHuntFormState(defaultDistrict?: number | null): IndividualHuntFormState {
     return {
         notes: "",
-        district: null,
+        district: defaultDistrict ?? null,
         selectedPosition: null,
         species: "",
         equipment: [],
@@ -59,6 +62,7 @@ function getDefaultAddIndividualHuntFormState(): IndividualHuntFormState {
         selectedSpeciesList: [],
         selectedSpeciesWithEquipmentList: [],
         dogs: [],
+        huntAllSpecies: false,
     };
 }
 
@@ -94,10 +98,11 @@ function getDefaultEditIndividualHuntFormState(hunt: Hunt): IndividualHuntFormSt
         plannedToDate: new Date(hunt.plannedTo),
         species: "",
         equipment,
-        selectedSpeciesList: hasEquipment ? [] : hunt.targetSpecies ?? [],
-        selectedSpeciesWithEquipmentList: hasEquipment ? hunt.targetSpecies ?? [] : [],
+        selectedSpeciesList: hasEquipment ? [] : (hunt.targetSpecies ?? []),
+        selectedSpeciesWithEquipmentList: hasEquipment ? (hunt.targetSpecies ?? []) : [],
         propertyName: hunt.propertyName ?? "",
         dogs: hunt.dogs,
+        huntAllSpecies: hasEquipment ? false : !hunt.hasTargetSpecies,
     };
 }
 
@@ -110,11 +115,24 @@ export function IndividualHuntForm(props: IndividualHuntFormProps) {
     const { huntPlace, hunt } = props;
     const profile = useProfile();
     const { t } = useTranslation();
-    const service = useInterpret(() => addIndividualHuntMachine);
+    const actor = useActorRef(addIndividualHuntMachine, {
+        inspect: (inspectEvent) => {
+            if (inspectEvent.type === "@xstate.snapshot") {
+                const snapshot = inspectEvent.actorRef?.getSnapshot();
+                if (snapshot?.machine?.id === addIndividualHuntMachine.id) {
+                    logger.log("AIH " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event));
+                }
+            }
+        },
+    });
     const language = getAppLanguage();
     const classifiers = useClassifiers();
+    const oneAvailableDistrict = profile.memberships.length === 1;
+
+    const defaultDistrict = oneAvailableDistrict ? profile.memberships[0].huntingDistrict.id : null; // For multiple districts, start unselected
+
     const [individualHunt, setIndividualHunt] = React.useState<IndividualHuntFormState>(() =>
-        hunt ? getDefaultEditIndividualHuntFormState(hunt) : getDefaultAddIndividualHuntFormState()
+        hunt ? getDefaultEditIndividualHuntFormState(hunt) : getDefaultAddIndividualHuntFormState(defaultDistrict)
     );
 
     function onNotesChange(value: string) {
@@ -172,7 +190,25 @@ export function IndividualHuntForm(props: IndividualHuntFormProps) {
             if (equipment.length === 0) {
                 newState.selectedSpeciesList = [];
                 newState.selectedSpeciesWithEquipmentList = [];
+            } else {
+                // If equipment is selected and "All species will be hunted" is ON, turn it OFF
+                if (prevState.huntAllSpecies) {
+                    newState.huntAllSpecies = false;
+                }
             }
+            return newState;
+        });
+    }
+
+    function onHuntAllSpeciesToggle() {
+        setIndividualHunt((prevState) => {
+            const newState = { ...prevState, huntAllSpecies: !prevState.huntAllSpecies };
+
+            // If switching "All species will be hunted" ON, clear only the equipment (keep species selection)
+            if (!prevState.huntAllSpecies) {
+                newState.equipment = [];
+            }
+
             return newState;
         });
     }
@@ -217,14 +253,48 @@ export function IndividualHuntForm(props: IndividualHuntFormProps) {
             return;
         }
 
+        function getTargetSpecies() {
+            if (isInWaterBody) {
+                return [{ speciesId: SpeciesId.Birds }];
+            }
+
+            if (isDistrict && individualHunt.huntAllSpecies) {
+                return []; // Empty array when hunting all species in station
+            }
+
+            if (individualHunt.equipment.length > 0) {
+                return individualHunt.selectedSpeciesWithEquipmentList.map((species) => ({
+                    speciesId: species.speciesId,
+                    permitTypeId: species.permitTypeId,
+                }));
+            }
+
+            return individualHunt.selectedSpeciesList.map((species) => ({
+                speciesId: species.speciesId,
+                permitTypeId: species.permitTypeId,
+            }));
+        }
+
         const { isNightVision, isSemiAutomatic, isLightSourceUsed, isThermalScopeUsed } = getEquipmentStatus(
             individualHunt.equipment
         );
 
-        const hasTargetSpecies = individualHunt.selectedSpeciesList.length > 0;
+        const targetSpecies = getTargetSpecies();
+        const hasTargetSpecies = (() => {
+            // For waterbody hunts, always has target species (birds)
+            if (isInWaterBody) {
+                return true;
+            }
+
+            if (isDistrict && individualHunt.huntAllSpecies) {
+                return false;
+            }
+            return targetSpecies.length > 0;
+        })();
+
         const districtId = individualHunt.district ?? 0;
 
-        service.send({
+        actor.send({
             type: "SUBMIT",
             payload: {
                 id: hunt ? hunt.id : undefined,
@@ -252,17 +322,7 @@ export function IndividualHuntForm(props: IndividualHuntFormProps) {
                 guestHunters: [],
                 guestBeaters: [],
                 hasTargetSpecies,
-                targetSpecies: isInWaterBody
-                    ? [{ speciesId: SpeciesId.Birds }]
-                    : individualHunt.equipment.length > 0
-                    ? individualHunt.selectedSpeciesWithEquipmentList.map((species) => ({
-                          speciesId: species.speciesId,
-                          permitTypeId: species.permitTypeId,
-                      }))
-                    : individualHunt.selectedSpeciesList.map((species) => ({
-                          speciesId: species.speciesId,
-                          permitTypeId: species.permitTypeId,
-                      })),
+                targetSpecies,
                 dogs: individualHunt.dogs,
             },
         });
@@ -311,6 +371,7 @@ export function IndividualHuntForm(props: IndividualHuntFormProps) {
                             label={formTexts.title}
                             onChange={onDistrictChange}
                             value={individualHunt.district}
+                            readonly={oneAvailableDistrict}
                         />
                         <Spacer size={16} />
                     </>
@@ -349,7 +410,7 @@ export function IndividualHuntForm(props: IndividualHuntFormProps) {
                         positionType="individualHunt"
                         onMark={onSelectPosition}
                         position={individualHunt.selectedPosition}
-                        activeDistrictId={individualHunt.district ?? undefined}
+                        activeDistrictIds={individualHunt.district !== null ? [individualHunt.district] : undefined}
                     />
                 </View>
                 <Spacer size={16} />
@@ -374,7 +435,19 @@ export function IndividualHuntForm(props: IndividualHuntFormProps) {
                     </>
                 ) : null}
 
-                {huntPlace !== HuntPlace.WaterBody ? (
+                {huntPlace === HuntPlace.InTheStation ? (
+                    <>
+                        <Switch
+                            label={t("hunt.individualHunt.huntAllSpecies")}
+                            checked={individualHunt.huntAllSpecies}
+                            onPress={onHuntAllSpeciesToggle}
+                        />
+                        <Spacer size={individualHunt.huntAllSpecies ? 0 : 12} />
+                    </>
+                ) : null}
+
+                {huntPlace !== HuntPlace.WaterBody &&
+                (huntPlace !== HuntPlace.InTheStation || !individualHunt.huntAllSpecies) ? (
                     <MultiSelect
                         label={t("hunt.individualHunt.huntingSpecies")}
                         options={filteredSpeciesOptions}
@@ -426,7 +499,7 @@ export function IndividualHuntForm(props: IndividualHuntFormProps) {
                     disabled={validationErrors.length > 0}
                 />
             </View>
-            <AddIndividualHuntStatusDialog service={service} isEditing={Boolean(hunt)} />
+            <AddIndividualHuntStatusDialog actor={actor} isEditing={Boolean(hunt)} />
         </>
     );
 }

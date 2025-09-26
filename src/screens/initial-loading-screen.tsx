@@ -9,14 +9,13 @@ import { Spacer } from "~/components/spacer";
 import { Spinner } from "~/components/spinner";
 import { Text } from "~/components/text";
 import { logger } from "~/logger";
-import { useAuth } from "~/machines/authentication-machine";
+import { authenticationActor } from "~/machines/authentication-machine";
 import { theme } from "~/theme";
 
 export function InitialLoadingActiveScreen() {
     const { t } = useTranslation();
     const [showLogoutButton, setShowLogoutButton] = React.useState(false);
     const [showConfirmLogout, setShowConfirmLogout] = React.useState(false);
-    const [, send] = useAuth();
 
     React.useEffect(() => {
         const timeout = setTimeout(() => {
@@ -29,7 +28,7 @@ export function InitialLoadingActiveScreen() {
     }, []);
 
     function onLogoutConfirmed() {
-        send({ type: "LOGOUT" });
+        authenticationActor.send({ type: "LOGOUT" });
     }
 
     return (
@@ -78,7 +77,6 @@ type InitialLoadingFailedScreenProps = {
 
 export function InitialLoadingFailedScreen(props: InitialLoadingFailedScreenProps) {
     const { t } = useTranslation();
-    const [, send] = useAuth();
     const [showDebugDialog, setShowDebugDialog] = React.useState(false);
     const [showConfirmLogout, setShowConfirmLogout] = React.useState(false);
     const [isShareLogsInProgress, setIsShareLogsInProgress] = React.useState(false);
@@ -101,7 +99,7 @@ export function InitialLoadingFailedScreen(props: InitialLoadingFailedScreenProp
     }
 
     function onLogoutConfirmed() {
-        send({ type: "LOGOUT" });
+        authenticationActor.send({ type: "LOGOUT" });
     }
 
     return (

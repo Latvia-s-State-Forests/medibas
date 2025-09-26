@@ -52,6 +52,6 @@ export const districtDamageSchema = z.discriminatedUnion("damageTypeId", [
 
 export type DistrictDamage = z.infer<typeof districtDamageSchema>;
 
-export const districtDamagesPerDistrictIdSchema = z.record(z.array(districtDamageSchema));
+export const districtDamagesPerDistrictIdSchema = z.record(z.string(), z.array(districtDamageSchema));
 
 export type DistrictDamagesPerDistrictId = z.infer<typeof districtDamagesPerDistrictIdSchema>;

@@ -1,8 +1,6 @@
 import { i18n } from "~/i18n";
 import { AgeId, GenderId, HuntedTypeId } from "~/types/classifiers";
-import { UnlimitedPreyState } from "~/types/hunt";
-import { LimitedPreyState } from "~/types/hunt";
-import { UnlimitedSpecies } from "~/types/hunt";
+import { LimitedPreyState, UnlimitedPreyState, UnlimitedSpecies } from "~/types/hunt";
 import { Permit } from "~/types/permits";
 
 function getErrorMessage(fieldName: string): string {

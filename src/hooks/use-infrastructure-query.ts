@@ -8,23 +8,21 @@ import { Infrastructure } from "~/types/infrastructure";
 export function useInfrastructureQuery(enabled: boolean = false) {
     const userStorage = useUserStorage();
 
-    return useQuery<{ infrastructure: Infrastructure[]; fetched: string }>(
-        queryKeys.infrastructure,
-        async () => {
-            const infrastructure = await api.getInfrastructure();
-            const fetched = new Date().toISOString();
-            return { infrastructure, fetched };
-        },
-        {
-            initialData: userStorage.getInfrastructure(),
-            onSuccess: (data) => {
+    return useQuery<{ infrastructure: Infrastructure[]; fetched: string }>({
+        queryKey: queryKeys.infrastructure,
+        queryFn: async () => {
+            try {
+                const infrastructure = await api.getInfrastructure();
+                const fetched = new Date().toISOString();
                 logger.log("Infrastructure loaded");
-                userStorage.setInfrastructure(data.infrastructure, data.fetched);
-            },
-            onError: (error) => {
+                userStorage.setInfrastructure(infrastructure, fetched);
+                return { infrastructure, fetched };
+            } catch (error) {
                 logger.error("Failed to load infrastructure", error);
-            },
-            enabled,
-        }
-    );
+                throw error;
+            }
+        },
+        initialData: () => userStorage.getInfrastructure(),
+        enabled,
+    });
 }

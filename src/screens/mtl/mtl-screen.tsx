@@ -25,8 +25,8 @@ export function MTLScreen() {
     useFocusEffect(
         React.useCallback(() => {
             InteractionManager.runAfterInteractions(() => {
-                queryClient.invalidateQueries(queryKeys.profile);
-                queryClient.invalidateQueries(queryKeys.memberships);
+                queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+                queryClient.invalidateQueries({ queryKey: queryKeys.memberships });
             });
         }, [])
     );

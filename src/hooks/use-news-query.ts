@@ -8,14 +8,19 @@ import { NewsItem } from "~/types/news";
 export function useNewsQuery() {
     const userStorage = useUserStorage();
 
-    return useQuery<NewsItem[]>(queryKeys.news, () => api.getNews(), {
-        initialData: userStorage.getNews(),
-        onSuccess: (news) => {
-            logger.log("News loaded");
-            userStorage.setNews(news);
+    return useQuery<NewsItem[]>({
+        queryKey: queryKeys.news,
+        queryFn: async () => {
+            try {
+                const news = await api.getNews();
+                logger.log("News loaded");
+                userStorage.setNews(news);
+                return news;
+            } catch (error) {
+                logger.error("Failed to load news", error);
+                throw error;
+            }
         },
-        onError: (error) => {
-            logger.error("Failed to load news", error);
-        },
+        initialData: () => userStorage.getNews(),
     });
 }

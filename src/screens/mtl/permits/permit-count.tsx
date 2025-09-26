@@ -20,7 +20,7 @@ export function PermitCount({ title, isEditable = false, count, onPress, style }
             </Text>
             {isEditable ? (
                 <View style={styles.rowContent}>
-                    <MediumIcon onPress={onPress} color="greenActive" name="edit" />
+                    <MediumIcon color="greenActive" name="edit" />
                     <Spacer horizontal size={20} />
                     <Text style={styles.countText}>{count}</Text>
                 </View>

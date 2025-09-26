@@ -14,11 +14,11 @@ type HuntsProviderProps = {
 export function HuntsProvider(props: HuntsProviderProps) {
     const activities = useHuntActivities();
     const userStorage = useUserStorage();
-    const latestHuntFetchDate = userStorage.getLatestHuntFetchDate();
+    const lastHuntsRequestTiming = userStorage.getLastHuntsRequestTiming();
 
     const hunts = React.useMemo(() => {
-        return combineHuntsWithActivities(props.hunts, activities, latestHuntFetchDate);
-    }, [props.hunts, activities, latestHuntFetchDate]);
+        return combineHuntsWithActivities(props.hunts, activities, lastHuntsRequestTiming?.startedAt);
+    }, [props.hunts, activities, lastHuntsRequestTiming?.startedAt]);
 
     return <HuntsContext.Provider value={hunts}>{props.children}</HuntsContext.Provider>;
 }

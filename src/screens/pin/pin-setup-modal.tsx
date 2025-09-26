@@ -11,15 +11,15 @@ import { NumberPad } from "~/screens/pin/number-pad";
 import { PinDisplay } from "~/screens/pin/pin-display";
 import { pinSetupMachine } from "~/screens/pin/pin-setup-machine";
 
-type PinSetupModal = {
+type PinSetupModalProps = {
     visible: boolean;
     onClose: () => void;
     reloadPinStatus: () => void;
 };
 
-export function PinSetupModal({ visible, onClose, reloadPinStatus }: PinSetupModal) {
+export function PinSetupModal({ visible, onClose, reloadPinStatus }: PinSetupModalProps) {
     const { t } = useTranslation();
-    const [state, send] = useMachine(() => pinSetupMachine);
+    const [state, send] = useMachine(pinSetupMachine);
     const isFailure = state.matches("failure");
     const isSuccess = state.matches("success");
 

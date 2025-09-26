@@ -37,12 +37,15 @@ export function DistrictDamagesListScreen(props: DistrictDamagesListScreenProps)
     // Whenever the screen is focused, refetch damages
     useFocusEffect(
         React.useCallback(() => {
-            queryClient.invalidateQueries(queryKeys.districtDamages);
+            queryClient.invalidateQueries({ queryKey: queryKeys.districtDamages });
         }, [])
     );
 
     function getDamageTitle(type: DamageTypeId): string {
-        return classifiers.damageTypes.options.find(({ id }) => id === type)?.description[language] ?? "";
+        return (
+            classifiers.damageTypes.options.find(({ id }) => id === type)?.description[language] ??
+            t("damage.damageReports.UnknownType")
+        );
     }
 
     const district = profile.memberships.find((membership) => membership.huntingDistrictId === districtId)
@@ -85,7 +88,7 @@ export function DistrictDamagesListScreen(props: DistrictDamagesListScreenProps)
                 renderItem={({ item: damage }) => (
                     <DistrictDamageListItem
                         key={`${damage.id}_${damage.damageTypeId}`}
-                        iconName={damageTypeIcon[damage.damageTypeId]}
+                        iconName={damageTypeIcon[damage.damageTypeId] ?? "cross"}
                         type={getDamageTitle(damage.damageTypeId)}
                         onPress={() => navigation.navigate("DistrictDamagesDetailScreen", { detail: damage })}
                         time={damage.vmdAcceptedOn}

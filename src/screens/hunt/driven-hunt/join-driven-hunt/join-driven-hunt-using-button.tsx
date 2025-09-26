@@ -4,7 +4,7 @@ import { randomUUID } from "expo-crypto";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { match, P } from "ts-pattern";
-import { assign, createMachine } from "xstate";
+import { assign, fromCallback, setup } from "xstate";
 import { api } from "~/api";
 import { Button } from "~/components/button";
 import { useClassifiers } from "~/hooks/use-classifiers";
@@ -20,160 +20,72 @@ import { HunterConfirmation } from "./hunter-confirmation";
 import { LoadingMessage } from "./loading-message";
 import { SuccessMessage } from "./success-message";
 
-const joinDrivenHuntUsingButtonMachine = createMachine(
-    {
-        id: "joinDrivenHuntUsingButton",
-        schema: {
-            events: {} as
-                | { type: "JOIN"; title: string; eventGuid: string }
-                | {
-                      type: "CONFIRMATION_CONFIRMED";
-                      eventGuid: string;
-                      participantGuid: string;
-                      fullName: string;
-                      role: ParticipantRole;
-                  }
-                | { type: "CONFIRMATION_REJECTED" }
-                | { type: "JOIN_SUCCESS" }
-                | { type: "JOIN_FAILURE_NETWORK" }
-                | { type: "JOIN_FAILURE_CODE"; errorCode: number }
-                | { type: "JOIN_FAILURE_OTHER" }
-                | { type: "SUCCESS_CONFIRMED" }
-                | { type: "FAILURE_CONFIRMED" },
-            context: {} as { hunt?: { title: string; eventGuid: string }; errorCode?: number },
-        },
-        initial: "idle",
-        states: {
-            idle: {
-                on: {
-                    JOIN: { target: "confirming", actions: ["setHunt"] },
-                },
-            },
-            confirming: {
-                initial: "idle",
-                states: {
-                    idle: {
-                        on: {
-                            CONFIRMATION_CONFIRMED: {
-                                target: "#joinDrivenHuntUsingButton.joining",
-                                actions: ["resetHunt"],
-                            },
-                            CONFIRMATION_REJECTED: { target: "closing" },
-                        },
-                    },
-                    closing: {
-                        after: {
-                            300: { target: "#joinDrivenHuntUsingButton.idle" },
-                        },
-                    },
-                },
-            },
-            joining: {
-                on: {
-                    JOIN_SUCCESS: { target: "success" },
-                    JOIN_FAILURE_NETWORK: { target: "failureNetwork" },
-                    JOIN_FAILURE_CODE: { target: "failureCode", actions: ["setErrorCode"] },
-                    JOIN_FAILURE_OTHER: { target: "failureOther" },
-                },
-                invoke: { src: "join" },
-            },
-            success: {
-                initial: "idle",
-                states: {
-                    idle: {
-                        on: {
-                            SUCCESS_CONFIRMED: { target: "closing" },
-                        },
-                    },
-                    closing: {
-                        after: {
-                            300: { target: "#joinDrivenHuntUsingButton.idle" },
-                        },
-                    },
-                },
-            },
-            failureNetwork: {
-                initial: "idle",
-                states: {
-                    idle: {
-                        on: {
-                            FAILURE_CONFIRMED: { target: "closing" },
-                        },
-                    },
-                    closing: {
-                        after: {
-                            300: { target: "#joinDrivenHuntUsingButton.idle" },
-                        },
-                    },
-                },
-            },
-            failureCode: {
-                initial: "idle",
-                states: {
-                    idle: {
-                        on: {
-                            FAILURE_CONFIRMED: { target: "closing" },
-                        },
-                    },
-                    closing: {
-                        after: {
-                            300: { target: "#joinDrivenHuntUsingButton.idle" },
-                        },
-                    },
-                },
-            },
-            failureOther: {
-                initial: "idle",
-                states: {
-                    idle: {
-                        on: {
-                            FAILURE_CONFIRMED: { target: "closing" },
-                        },
-                    },
-                    closing: {
-                        after: {
-                            300: { target: "#joinDrivenHuntUsingButton.idle", actions: ["resetErrorCode"] },
-                        },
-                    },
-                },
-            },
-        },
-        preserveActionOrder: true,
-        predictableActionArguments: true,
+type JoinDrivenHuntUsingButtonEvent =
+    | { type: "JOIN"; title: string; eventGuid: string }
+    | {
+          type: "CONFIRMATION_CONFIRMED";
+          eventGuid: string;
+          participantGuid: string;
+          fullName: string;
+          role: ParticipantRole;
+      }
+    | { type: "CONFIRMATION_REJECTED" }
+    | { type: "JOIN_SUCCESS" }
+    | { type: "JOIN_FAILURE_NETWORK" }
+    | { type: "JOIN_FAILURE_CODE"; errorCode: number }
+    | { type: "JOIN_FAILURE_OTHER" }
+    | { type: "SUCCESS_CONFIRMED" }
+    | { type: "FAILURE_CONFIRMED" };
+
+const joinDrivenHuntUsingButtonMachine = setup({
+    types: {
+        events: {} as JoinDrivenHuntUsingButtonEvent,
+        context: {} as { hunt?: { title: string; eventGuid: string }; errorCode?: number },
     },
-    {
-        actions: {
-            setHunt: assign({
-                hunt: (context, event) => {
-                    if (event.type === "JOIN") {
-                        return {
-                            title: event.title,
-                            eventGuid: event.eventGuid,
-                        };
-                    }
-                    return context.hunt;
-                },
-            }),
-            resetHunt: assign({
-                hunt: undefined,
-            }),
-            setErrorCode: assign({
-                errorCode: (context, event) => {
-                    if (event.type === "JOIN_FAILURE_CODE") {
-                        return event.errorCode;
-                    }
-                    return context.errorCode;
-                },
-            }),
-            resetErrorCode: assign({
-                errorCode: undefined,
-            }),
-        },
-        services: {
-            join: (context, event) => (send) => {
-                if (event.type !== "CONFIRMATION_CONFIRMED") {
-                    logger.error(`Expected event type "CONFIRMATION_CONFIRMED", got "${event.type}"`);
-                    send({ type: "JOIN_FAILURE_OTHER" });
+    actions: {
+        setHunt: assign({
+            hunt: ({ context, event }) => {
+                if (event.type === "JOIN") {
+                    return {
+                        title: event.title,
+                        eventGuid: event.eventGuid,
+                    };
+                }
+                return context.hunt;
+            },
+        }),
+        resetHunt: assign({
+            hunt: undefined,
+        }),
+        setErrorCode: assign({
+            errorCode: ({ context, event }) => {
+                if (event.type === "JOIN_FAILURE_CODE") {
+                    return event.errorCode;
+                }
+                return context.errorCode;
+            },
+        }),
+        resetErrorCode: assign({
+            errorCode: undefined,
+        }),
+    },
+    actors: {
+        join: fromCallback(
+            ({
+                sendBack,
+                input,
+            }: {
+                sendBack: (event: JoinDrivenHuntUsingButtonEvent) => void;
+                input: {
+                    eventGuid: string;
+                    participantGuid: string;
+                    fullName: string;
+                    role: ParticipantRole;
+                } | null;
+            }) => {
+                if (!input) {
+                    logger.error("Failed to join hunt, missing input");
+                    sendBack({ type: "JOIN_FAILURE_OTHER" });
                     return;
                 }
 
@@ -186,33 +98,149 @@ const joinDrivenHuntUsingButtonMachine = createMachine(
                     try {
                         const network = await NetInfo.fetch();
                         if (!network.isConnected || !network.isInternetReachable) {
-                            send({ type: "JOIN_FAILURE_NETWORK" });
+                            sendBack({ type: "JOIN_FAILURE_NETWORK" });
                             return;
                         }
 
-                        const result = await api.joinHunt({ eventGuid, participantGuid, fullName, participantRoleId });
+                        const result = await api.joinHunt({
+                            eventGuid,
+                            participantGuid,
+                            fullName,
+                            participantRoleId,
+                        });
                         if (!result.success) {
                             if (result.errorCode) {
-                                send({ type: "JOIN_FAILURE_CODE", errorCode: result.errorCode });
+                                sendBack({ type: "JOIN_FAILURE_CODE", errorCode: result.errorCode });
                             } else {
-                                send({ type: "JOIN_FAILURE_OTHER" });
+                                sendBack({ type: "JOIN_FAILURE_OTHER" });
                             }
                             return;
                         }
 
-                        await queryClient.invalidateQueries(queryKeys.hunts);
+                        await queryClient.invalidateQueries({ queryKey: queryKeys.hunts });
 
-                        send({ type: "JOIN_SUCCESS" });
+                        sendBack({ type: "JOIN_SUCCESS" });
                     } catch (error) {
                         logger.error("Failed to join hunt due to an unexpected error", error);
-                        send({ type: "JOIN_FAILURE_OTHER" });
+                        sendBack({ type: "JOIN_FAILURE_OTHER" });
                     }
                 }
-                join(event.eventGuid, event.participantGuid, event.fullName, event.role);
+                join(input.eventGuid, input.participantGuid, input.fullName, input.role);
+            }
+        ),
+    },
+}).createMachine({
+    id: "joinDrivenHuntUsingButton",
+    initial: "idle",
+    states: {
+        idle: {
+            on: {
+                JOIN: { target: "confirming", actions: ["setHunt"] },
             },
         },
-    }
-);
+        confirming: {
+            initial: "idle",
+            states: {
+                idle: {
+                    on: {
+                        CONFIRMATION_CONFIRMED: {
+                            target: "#joinDrivenHuntUsingButton.joining",
+                            actions: ["resetHunt"],
+                        },
+                        CONFIRMATION_REJECTED: { target: "closing" },
+                    },
+                },
+                closing: {
+                    after: {
+                        300: { target: "#joinDrivenHuntUsingButton.idle" },
+                    },
+                },
+            },
+        },
+        joining: {
+            on: {
+                JOIN_SUCCESS: { target: "success" },
+                JOIN_FAILURE_NETWORK: { target: "failureNetwork" },
+                JOIN_FAILURE_CODE: { target: "failureCode", actions: ["setErrorCode"] },
+                JOIN_FAILURE_OTHER: { target: "failureOther" },
+            },
+            invoke: {
+                src: "join",
+                input: ({ event }) => {
+                    if (event.type === "CONFIRMATION_CONFIRMED") {
+                        return {
+                            eventGuid: event.eventGuid,
+                            participantGuid: event.participantGuid,
+                            fullName: event.fullName,
+                            role: event.role,
+                        };
+                    }
+                    return null;
+                },
+            },
+        },
+        success: {
+            initial: "idle",
+            states: {
+                idle: {
+                    on: {
+                        SUCCESS_CONFIRMED: { target: "closing" },
+                    },
+                },
+                closing: {
+                    after: {
+                        300: { target: "#joinDrivenHuntUsingButton.idle" },
+                    },
+                },
+            },
+        },
+        failureNetwork: {
+            initial: "idle",
+            states: {
+                idle: {
+                    on: {
+                        FAILURE_CONFIRMED: { target: "closing" },
+                    },
+                },
+                closing: {
+                    after: {
+                        300: { target: "#joinDrivenHuntUsingButton.idle" },
+                    },
+                },
+            },
+        },
+        failureCode: {
+            initial: "idle",
+            states: {
+                idle: {
+                    on: {
+                        FAILURE_CONFIRMED: { target: "closing" },
+                    },
+                },
+                closing: {
+                    after: {
+                        300: { target: "#joinDrivenHuntUsingButton.idle" },
+                    },
+                },
+            },
+        },
+        failureOther: {
+            initial: "idle",
+            states: {
+                idle: {
+                    on: {
+                        FAILURE_CONFIRMED: { target: "closing" },
+                    },
+                },
+                closing: {
+                    after: {
+                        300: { target: "#joinDrivenHuntUsingButton.idle", actions: ["resetErrorCode"] },
+                    },
+                },
+            },
+        },
+    },
+});
 
 type Props = {
     visible: boolean;
@@ -223,16 +251,16 @@ export function JoinDrivenHuntUsingButton({ visible, hunt }: Props) {
     const { t } = useTranslation();
     const profile = useProfile();
     const classifiers = useClassifiers();
-    const [state, send, service] = useMachine(() => joinDrivenHuntUsingButtonMachine);
-
-    React.useEffect(() => {
-        const subscription = service.subscribe((state) => {
-            const message = "JDHUB " + JSON.stringify(state.value) + " " + JSON.stringify(state.event);
-            logger.log(message);
-        });
-
-        return () => subscription.unsubscribe();
-    }, [service]);
+    const [state, send] = useMachine(joinDrivenHuntUsingButtonMachine, {
+        inspect: (inspectEvent) => {
+            if (inspectEvent.type === "@xstate.snapshot") {
+                const snapshot = inspectEvent.actorRef?.getSnapshot();
+                if (snapshot?.machine?.id === joinDrivenHuntUsingButtonMachine.id) {
+                    logger.log("JDHUB " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event));
+                }
+            }
+        },
+    });
 
     return (
         <>
@@ -256,7 +284,7 @@ export function JoinDrivenHuntUsingButton({ visible, hunt }: Props) {
                     !state.matches({ failureOther: "closing" })
                 }
                 onBackButtonPress={() => {
-                    if (state.can("CONFIRMATION_REJECTED")) {
+                    if (state.can({ type: "CONFIRMATION_REJECTED" })) {
                         send({ type: "CONFIRMATION_REJECTED" });
                     }
                 }}
@@ -290,17 +318,6 @@ export function JoinDrivenHuntUsingButton({ visible, hunt }: Props) {
                             <SuccessMessage
                                 onContinue={() => {
                                     send({ type: "SUCCESS_CONFIRMED" });
-                                }}
-                            />
-                        );
-                    })
-                    .with({ value: { failureScanner: P.any } }, () => {
-                        return (
-                            <FailureMessage
-                                title={t("hunt.drivenHunt.join.failureScanner.title")}
-                                description={t("hunt.drivenHunt.join.failureScanner.description")}
-                                onClose={() => {
-                                    send({ type: "FAILURE_CONFIRMED" });
                                 }}
                             />
                         );

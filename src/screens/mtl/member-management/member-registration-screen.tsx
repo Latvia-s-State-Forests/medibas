@@ -1,11 +1,12 @@
 import { useNavigation } from "@react-navigation/native";
-import { useInterpret } from "@xstate/react";
+import { useActorRef } from "@xstate/react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { match } from "ts-pattern";
-import { ActorRefFrom, assign, createMachine } from "xstate";
+import { ActorRefFrom, assign, fromCallback, setup } from "xstate";
 import { RegisterMemberBody, api } from "~/api";
 import { Button } from "~/components/button";
 import { CheckboxButton } from "~/components/checkbox-button";
@@ -31,10 +32,19 @@ export function MemberRegistrationScreen() {
     const [hunterCardNumber, setHunterCardNumber] = React.useState("");
     const [selectedDistrictIds, setSelectedDistrictIds] = React.useState<number[]>([]);
 
-    const service = useInterpret(() => registerMemberMachine);
+    const actor = useActorRef(registerMemberMachine, {
+        inspect: (inspectEvent) => {
+            if (inspectEvent.type === "@xstate.snapshot") {
+                const snapshot = inspectEvent.actorRef?.getSnapshot();
+                if (snapshot?.machine?.id === registerMemberMachine.id) {
+                    logger.log("RM " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event));
+                }
+            }
+        },
+    });
 
     function onSubmit() {
-        service.send({
+        actor.send({
             type: "REGISTER_MEMBER",
             payload: {
                 cardNumber: hunterCardNumber,
@@ -55,7 +65,8 @@ export function MemberRegistrationScreen() {
             <View style={styles.container}>
                 <Header title={t("mtl.registerMember.title")} />
                 <View style={styles.content}>
-                    <ScrollView
+                    <KeyboardAwareScrollView
+                        bottomOffset={Platform.select({ ios: 24, android: 48 })}
                         contentContainerStyle={[
                             {
                                 paddingRight: insets.right + 16,
@@ -79,8 +90,8 @@ export function MemberRegistrationScreen() {
                                 selectedDistrictIds.length === districts.length
                                     ? "checked"
                                     : selectedDistrictIds.length > 0
-                                    ? "indeterminate"
-                                    : "unchecked"
+                                      ? "indeterminate"
+                                      : "unchecked"
                             }
                             label={t("mtl.registerMember.allDistricts")}
                             onPress={() => {
@@ -110,7 +121,7 @@ export function MemberRegistrationScreen() {
                                 }}
                             />
                         ))}
-                    </ScrollView>
+                    </KeyboardAwareScrollView>
                     <View
                         style={[
                             {
@@ -131,7 +142,7 @@ export function MemberRegistrationScreen() {
                 </View>
             </View>
 
-            <RegisterMemberStatusDialog service={service} />
+            <RegisterMemberStatusDialog actor={actor} />
         </>
     );
 }
@@ -157,135 +168,135 @@ const styles = StyleSheet.create({
     },
 });
 
-const registerMemberMachine = createMachine(
-    {
-        id: "registerMember",
-        schema: {
-            events: {} as
-                | { type: "REGISTER_MEMBER"; payload: RegisterMemberBody }
-                | { type: "REGISTER_MEMBER_SUCCESS" }
-                | { type: "REGISTER_MEMBER_FAILURE" }
-                | { type: "UPDATE_MEMBERSHIPS_SUCCESS" }
-                | { type: "UPDATE_MEMBERSHIPS_FAILURE" }
-                | { type: "RESET" }
-                | NetworkStatusEvent,
-            context: {} as { payload?: RegisterMemberBody },
-        },
-        initial: "idle",
-        states: {
-            idle: {
-                on: {
-                    REGISTER_MEMBER: { target: "verifyingNetworkConnection", actions: ["setPayload"] },
-                },
-            },
+type RegisterMemberEvent =
+    | { type: "REGISTER_MEMBER"; payload: RegisterMemberBody }
+    | { type: "REGISTER_MEMBER_SUCCESS" }
+    | { type: "REGISTER_MEMBER_FAILURE" }
+    | { type: "UPDATE_MEMBERSHIPS_SUCCESS" }
+    | { type: "UPDATE_MEMBERSHIPS_FAILURE" }
+    | { type: "RESET" }
+    | NetworkStatusEvent;
 
-            verifyingNetworkConnection: {
-                invoke: { src: networkStatusMachine },
-                on: {
-                    NETWORK_AVAILABLE: { target: "registeringMember" },
-                    NETWORK_UNAVAILABLE: { target: "networkFailure" },
-                },
-            },
-
-            registeringMember: {
-                invoke: { src: "registerMember" },
-                on: {
-                    REGISTER_MEMBER_SUCCESS: { target: "updatingMemberships" },
-                    REGISTER_MEMBER_FAILURE: { target: "otherFailure" },
-                },
-            },
-
-            updatingMemberships: {
-                invoke: { src: "updateMemberships" },
-                on: {
-                    UPDATE_MEMBERSHIPS_SUCCESS: { target: "success" },
-                    UPDATE_MEMBERSHIPS_FAILURE: { target: "otherFailure" },
-                },
-            },
-
-            success: {
-                type: "final",
-            },
-
-            networkFailure: {
-                on: {
-                    RESET: { target: "idle", actions: ["resetPayload"] },
-                },
-            },
-
-            otherFailure: {
-                on: {
-                    RESET: { target: "idle", actions: ["resetPayload"] },
-                },
-            },
-        },
-        preserveActionOrder: true,
-        predictableActionArguments: true,
+const registerMemberMachine = setup({
+    types: {
+        events: {} as RegisterMemberEvent,
+        context: {} as { payload?: RegisterMemberBody },
     },
-    {
-        actions: {
-            setPayload: assign({
-                payload: (context, event) => {
-                    if (event.type !== "REGISTER_MEMBER") {
-                        return context.payload;
-                    }
-                    return event.payload;
-                },
-            }),
-            resetPayload: assign({
-                payload: undefined,
-            }),
-        },
-        services: {
-            registerMember: (context) => async (send) => {
-                if (!context.payload) {
+    actions: {
+        setPayload: assign({
+            payload: ({ context, event }) => {
+                if (event.type !== "REGISTER_MEMBER") {
+                    return context.payload;
+                }
+                return event.payload;
+            },
+        }),
+        resetPayload: assign({
+            payload: undefined,
+        }),
+    },
+    actors: {
+        registerMember: fromCallback(
+            ({
+                sendBack,
+                input,
+            }: {
+                sendBack: (event: RegisterMemberEvent) => void;
+                input: { payload?: RegisterMemberBody };
+            }) => {
+                const payload = input?.payload;
+                if (!payload) {
                     logger.error("Failed to register member, payload is missing");
-                    send({ type: "REGISTER_MEMBER_FAILURE" });
+                    sendBack({ type: "REGISTER_MEMBER_FAILURE" });
                     return;
                 }
 
-                try {
-                    await api.registerMembership(context.payload);
-                    send({ type: "REGISTER_MEMBER_SUCCESS" });
-                } catch (error) {
-                    logger.error("Failed to register member", error);
-                    send({ type: "REGISTER_MEMBER_FAILURE" });
-                }
-            },
-            updateMemberships: () => async (send) => {
-                try {
-                    await queryClient.refetchQueries(queryKeys.memberships, undefined, { throwOnError: true });
-                    send({ type: "UPDATE_MEMBERSHIPS_SUCCESS" });
-                } catch (error) {
+                api.registerMembership(payload)
+                    .then(() => {
+                        sendBack({ type: "REGISTER_MEMBER_SUCCESS" });
+                    })
+                    .catch((error) => {
+                        logger.error("Failed to register member", error);
+                        sendBack({ type: "REGISTER_MEMBER_FAILURE" });
+                    });
+            }
+        ),
+        updateMemberships: fromCallback(({ sendBack }: { sendBack: (event: RegisterMemberEvent) => void }) => {
+            queryClient
+                .refetchQueries({ queryKey: queryKeys.memberships }, { throwOnError: true })
+                .then(() => {
+                    sendBack({ type: "UPDATE_MEMBERSHIPS_SUCCESS" });
+                })
+                .catch((error) => {
                     logger.error("Failed to update memberships", error);
-                    send({ type: "UPDATE_MEMBERSHIPS_FAILURE" });
-                }
+                    sendBack({ type: "UPDATE_MEMBERSHIPS_FAILURE" });
+                });
+        }),
+    },
+}).createMachine({
+    id: "registerMember",
+    initial: "idle",
+    states: {
+        idle: {
+            on: {
+                REGISTER_MEMBER: { target: "verifyingNetworkConnection", actions: ["setPayload"] },
             },
         },
-    }
-);
+
+        verifyingNetworkConnection: {
+            invoke: { src: networkStatusMachine },
+            on: {
+                NETWORK_AVAILABLE: { target: "registeringMember" },
+                NETWORK_UNAVAILABLE: { target: "networkFailure" },
+            },
+        },
+
+        registeringMember: {
+            invoke: { src: "registerMember", input: ({ context }) => ({ payload: context.payload }) },
+            on: {
+                REGISTER_MEMBER_SUCCESS: { target: "updatingMemberships" },
+                REGISTER_MEMBER_FAILURE: { target: "otherFailure" },
+            },
+        },
+
+        updatingMemberships: {
+            invoke: { src: "updateMemberships" },
+            on: {
+                UPDATE_MEMBERSHIPS_SUCCESS: { target: "success" },
+                UPDATE_MEMBERSHIPS_FAILURE: { target: "otherFailure" },
+            },
+        },
+
+        success: {
+            type: "final",
+        },
+
+        networkFailure: {
+            on: {
+                RESET: { target: "idle", actions: ["resetPayload"] },
+            },
+        },
+
+        otherFailure: {
+            on: {
+                RESET: { target: "idle", actions: ["resetPayload"] },
+            },
+        },
+    },
+});
 
 type RegisterMemberStatusDialogProps = {
-    service: ActorRefFrom<typeof registerMemberMachine>;
+    actor: ActorRefFrom<typeof registerMemberMachine>;
 };
 
-function RegisterMemberStatusDialog({ service }: RegisterMemberStatusDialogProps) {
+function RegisterMemberStatusDialog({ actor }: RegisterMemberStatusDialogProps) {
     const { t } = useTranslation();
     const navigation = useNavigation();
     const [visible, setVisible] = React.useState(false);
     const [status, setStatus] = React.useState<"loading" | "success" | "networkFailure" | "otherFailure">("loading");
 
     React.useEffect(() => {
-        const subscription = service.subscribe((state) => {
-            const message = "RM " + JSON.stringify(state.value) + " " + JSON.stringify(state.event);
-            logger.log(message);
-        });
-
-        return () => subscription.unsubscribe();
-    }, [service]);
-
-    React.useEffect(() => {
-        const subscription = service.subscribe((state) => {
+        const subscription = actor.subscribe((state) => {
             if (
                 state.matches("verifyingNetworkConnection") ||
                 state.matches("registeringMember") ||
@@ -308,7 +319,7 @@ function RegisterMemberStatusDialog({ service }: RegisterMemberStatusDialogProps
         });
 
         return () => subscription.unsubscribe();
-    }, [service]);
+    }, [actor]);
 
     return match(status)
         .with("loading", () => (
@@ -333,7 +344,7 @@ function RegisterMemberStatusDialog({ service }: RegisterMemberStatusDialogProps
                 buttons={
                     <Button
                         title={t("mtl.registerMember.networkFailure.close")}
-                        onPress={() => service.send("RESET")}
+                        onPress={() => actor.send({ type: "RESET" })}
                     />
                 }
             />
@@ -345,7 +356,10 @@ function RegisterMemberStatusDialog({ service }: RegisterMemberStatusDialogProps
                 title={t("mtl.registerMember.otherFailure.title")}
                 description={t("mtl.registerMember.otherFailure.description")}
                 buttons={
-                    <Button title={t("mtl.registerMember.otherFailure.close")} onPress={() => service.send("RESET")} />
+                    <Button
+                        title={t("mtl.registerMember.otherFailure.close")}
+                        onPress={() => actor.send({ type: "RESET" })}
+                    />
                 }
             />
         ))

@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useInterpret } from "@xstate/react";
+import { useActorRef } from "@xstate/react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
@@ -10,6 +10,7 @@ import { CheckboxButton } from "~/components/checkbox-button";
 import { LargestIcon } from "~/components/icon";
 import { Text } from "~/components/text";
 import { useDarkStatusBar } from "~/hooks/use-status-bar";
+import { logger } from "~/logger";
 import { theme } from "~/theme";
 import { RootNavigatorParams } from "~/types/navigation";
 import { DeleteMemberStatusDialog, deleteMemberMachine } from "./delete-member-status-dialog";
@@ -24,13 +25,25 @@ export function MemberDeletionModal(props: MemberDeletionModalProps) {
     const { member, districts, preSelectedDistrictId } = props.route.params;
     const [selectedDistrictIds, setSelectedDistrictIds] = React.useState([preSelectedDistrictId]);
 
-    const service = useInterpret(() => deleteMemberMachine, {
-        actions: {
-            onDeleteSuccess: () => {
-                navigation.goBack();
+    const actor = useActorRef(
+        deleteMemberMachine.provide({
+            actions: {
+                onDeleteSuccess: () => {
+                    navigation.goBack();
+                },
             },
-        },
-    });
+        }),
+        {
+            inspect: (inspectEvent) => {
+                if (inspectEvent.type === "@xstate.snapshot") {
+                    const snapshot = inspectEvent.actorRef?.getSnapshot();
+                    if (snapshot?.machine?.id === deleteMemberMachine.id) {
+                        logger.log("DM " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event));
+                    }
+                }
+            },
+        }
+    );
 
     useDarkStatusBar();
 
@@ -54,8 +67,8 @@ export function MemberDeletionModal(props: MemberDeletionModalProps) {
                         selectedDistrictIds.length === districts.length
                             ? "checked"
                             : selectedDistrictIds.length > 0
-                            ? "indeterminate"
-                            : "unchecked"
+                              ? "indeterminate"
+                              : "unchecked"
                     }
                     label={t("mtl.deleteMember.modal.allDistricts")}
                     onPress={() => {
@@ -101,7 +114,7 @@ export function MemberDeletionModal(props: MemberDeletionModalProps) {
                     title={t("mtl.deleteMember.modal.delete")}
                     variant="danger"
                     onPress={() => {
-                        service.send({
+                        actor.send({
                             type: "DELETE_FROM_MULTIPLE_DISTRICTS",
                             member,
                             districts: districts.filter((district) => selectedDistrictIds.includes(district.id)),
@@ -116,7 +129,7 @@ export function MemberDeletionModal(props: MemberDeletionModalProps) {
                 />
             </View>
 
-            <DeleteMemberStatusDialog service={service} />
+            <DeleteMemberStatusDialog actor={actor} />
         </View>
     );
 }

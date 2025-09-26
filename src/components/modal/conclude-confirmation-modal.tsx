@@ -25,7 +25,7 @@ export function ConcludeConfirmationModal({
     return (
         <Modal visible={visible} onClose={onClose}>
             <View style={styles.center}>
-                <LargestIcon name="lock" color="gray4" />
+                <LargestIcon name="lock" />
                 <Spacer size={38} />
                 <Text size={22} weight="bold" style={styles.text}>
                     {title}

@@ -10,14 +10,13 @@ import { getDescriptionForClassifierOption } from "~/utils/classifiers";
 import { formatDateTime } from "~/utils/format-date-time";
 import { formatPosition } from "~/utils/format-position";
 
-const DEFAULT_DESCRIPTION = "-";
-
 type DistrictHuntedAnimalFieldsProps = {
     huntedAnimal: HuntedAnimal;
 };
 
 export function DistrictHuntedAnimalFields(props: DistrictHuntedAnimalFieldsProps) {
     const { t } = useTranslation();
+    const UNKNOWN_SPECIES = t("features.unknownSpecies");
     const language = getAppLanguage();
     const classifiers = useClassifiers();
     const profile = useProfile();
@@ -28,21 +27,21 @@ export function DistrictHuntedAnimalFields(props: DistrictHuntedAnimalFieldsProp
 
     const permitType =
         getDescriptionForClassifierOption(classifiers.permitTypes.options, language, props.huntedAnimal.permitTypeId) ??
-        DEFAULT_DESCRIPTION;
+        UNKNOWN_SPECIES;
 
     return (
         <View style={styles.container}>
             <ReadOnlyField
-                label={t("reports.coordinates")}
+                label={t("hunt.coordinates")}
                 value={formatPosition({
                     latitude: props.huntedAnimal.location[1],
                     longitude: props.huntedAnimal.location[0],
                 })}
             />
 
-            <ReadOnlyField label={t("reports.registeredDate")} value={formatDateTime(props.huntedAnimal.huntedTime)} />
+            <ReadOnlyField label={t("hunt.registeredDate")} value={formatDateTime(props.huntedAnimal.huntedTime)} />
 
-            <ReadOnlyField label={t("reports.strapNumber")} value={props.huntedAnimal.strapNumber} />
+            <ReadOnlyField label={t("hunt.strapNumber")} value={props.huntedAnimal.strapNumber} />
 
             <ReadOnlyField label={t("hunt.district")} value={district ?? ""} />
 

@@ -91,6 +91,10 @@ export function hasPermissionToViewInfrastructuresLayer(profile: Profile, distri
     );
 }
 
+export function hasPermissionToViewStatistics(profile: Profile): boolean {
+    return profile.isHunter ?? false;
+}
+
 export function hasPermissionToCreateDrivenHunt(profile: Profile): boolean {
     return profile.memberships.some((membership) => membership.isTrustee || membership.isAdministrator);
 }

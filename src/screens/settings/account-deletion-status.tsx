@@ -1,32 +1,40 @@
-import { useActor } from "@xstate/react";
+import { useSelector } from "@xstate/react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { ActorRefFrom } from "xstate";
 import { Button } from "~/components/button";
 import { Dialog } from "~/components/dialog";
 import { Spinner } from "~/components/spinner";
-import { logger } from "~/logger";
 import { accountDeletionMachine } from "./account-deletion-machine";
 
 type AccountDeletionStatusProps = {
     actor: ActorRefFrom<typeof accountDeletionMachine>;
 };
 
-export function AccountDeletionStatus(props: AccountDeletionStatusProps) {
+export function AccountDeletionStatus({ actor }: AccountDeletionStatusProps) {
     const { t } = useTranslation();
-    const [state, send] = useActor(props.actor);
 
-    React.useEffect(() => {
-        const subscription = props.actor.subscribe((state) => {
-            logger.log("🗑️ AD " + JSON.stringify(state.value) + " " + JSON.stringify(state.event));
-        });
+    const countdown = useSelector(actor, (state) => state.context.countdown);
+    const state = useSelector(actor, (state) => {
+        if (state.matches("confirming")) {
+            return "confirming";
+        }
+        if (state.matches("deleting")) {
+            return "deleting";
+        }
+        if (state.matches("success")) {
+            return "success";
+        }
+        if (state.matches("failure")) {
+            return "failure";
+        }
+        return "other";
+    });
+    const isWaitingForConfirmation = useSelector(actor, (state) =>
+        state.matches({ confirming: "waitingForConfirmation" })
+    );
 
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [props.actor]);
-
-    if (state.matches("confirming")) {
+    if (state === "confirming") {
         return (
             <Dialog
                 visible
@@ -36,24 +44,24 @@ export function AccountDeletionStatus(props: AccountDeletionStatusProps) {
                 buttons={
                     <>
                         <Button
-                            title={state.context.countdown ? String(state.context.countdown) : t("general.delete")}
-                            disabled={!state.matches({ confirming: "waitingForConfirmation" })}
+                            title={countdown ? String(countdown) : t("general.delete")}
+                            disabled={!isWaitingForConfirmation}
                             variant="danger"
-                            onPress={() => send({ type: "CONFIRM" })}
+                            onPress={() => actor.send({ type: "CONFIRM" })}
                         />
                         <Button
                             title={t("modal.cancel")}
                             variant="secondary-outlined"
-                            onPress={() => send({ type: "REJECT" })}
+                            onPress={() => actor.send({ type: "REJECT" })}
                         />
                     </>
                 }
-                onBackButtonPress={() => send({ type: "REJECT" })}
+                onBackButtonPress={() => actor.send({ type: "REJECT" })}
             />
         );
     }
 
-    if (state.matches("deleting")) {
+    if (state === "deleting") {
         return (
             <Dialog
                 visible
@@ -64,18 +72,18 @@ export function AccountDeletionStatus(props: AccountDeletionStatusProps) {
         );
     }
 
-    if (state.matches("success")) {
+    if (state === "success") {
         return <Dialog visible icon="success" title={t("settings.deleteAccount.success.title")} />;
     }
 
-    if (state.matches("failure")) {
+    if (state === "failure") {
         return (
             <Dialog
                 visible
                 icon="failure"
                 title={t("settings.deleteAccount.failure.title")}
                 description={t("settings.deleteAccount.failure.subtitle")}
-                buttons={<Button onPress={() => send({ type: "RETRY" })} title={t("reportStatus.retry")} />}
+                buttons={<Button onPress={() => actor.send({ type: "RETRY" })} title={t("reportStatus.retry")} />}
             />
         );
     }

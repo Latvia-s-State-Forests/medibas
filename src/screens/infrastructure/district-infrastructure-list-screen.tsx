@@ -26,9 +26,12 @@ import { RootNavigatorParams } from "~/types/navigation";
 import { formatPosition } from "~/utils/format-position";
 import { DistrictInfrastructureListItem } from "./district-infrastructure-list-item";
 
-type DistrictInfrastructureListScreen = NativeStackScreenProps<RootNavigatorParams, "DistrictInfrastructureListScreen">;
+type DistrictInfrastructureListScreenProps = NativeStackScreenProps<
+    RootNavigatorParams,
+    "DistrictInfrastructureListScreen"
+>;
 
-export function DistrictInfrastructureListScreen(props: DistrictInfrastructureListScreen) {
+export function DistrictInfrastructureListScreen(props: DistrictInfrastructureListScreenProps) {
     const districtId = props.route.params.districtId;
     const classifiers = useClassifiers();
     const infrastructureInDistrict = useDistrictInfrastructure(districtId);
@@ -44,7 +47,7 @@ export function DistrictInfrastructureListScreen(props: DistrictInfrastructureLi
 
     useFocusEffect(
         React.useCallback(() => {
-            queryClient.invalidateQueries(queryKeys.infrastructure);
+            queryClient.invalidateQueries({ queryKey: queryKeys.infrastructure });
         }, [])
     );
 

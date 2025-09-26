@@ -104,6 +104,48 @@ describe("getSubmitDrivenHuntValidationErrors", () => {
         const errors = getSubmitDrivenHuntValidationErrors({ ...submitDrivenHunt, date: undefined });
         expect(errors).toEqual(['"Medību datums" ir obligāti aizpildāms lauks']);
     });
+
+    it("returns an error for each duplicate hunter in both hunters and beaters lists", () => {
+        const testState: DrivenHuntFormState = {
+            ...submitDrivenHunt,
+            hunters: [
+                {
+                    guid: "string1",
+                    personId: 1,
+                    fullName: "Jānis Bērziņš",
+                    huntersCardNumber: "MED1111",
+                    statusId: HuntEventStatus.Scheduled,
+                },
+                {
+                    guid: "string2",
+                    personId: 2,
+                    fullName: "Jānis Kalniņš",
+                    huntersCardNumber: "MED2222",
+                    statusId: HuntEventStatus.Scheduled,
+                },
+            ],
+            beaters: [
+                {
+                    guid: "beater1",
+                    userId: 100,
+                    fullName: "Jānis Bērziņš",
+                    statusId: HuntEventStatus.Scheduled,
+                    hunterPersonId: 1,
+                },
+                {
+                    guid: "beater2",
+                    userId: 101,
+                    fullName: "Jānis Kalniņš",
+                    statusId: HuntEventStatus.Scheduled,
+                    hunterPersonId: 2,
+                },
+            ],
+        };
+        const errors = getSubmitDrivenHuntValidationErrors(testState);
+        expect(errors).toContain("Jānis Bērziņš ir gan mednieku, gan dzinēju sarakstos");
+        expect(errors).toContain("Jānis Kalniņš ir gan mednieku, gan dzinēju sarakstos");
+        expect(errors.length).toBe(2);
+    });
 });
 
 describe("getDrivenHuntManagementErrors", () => {

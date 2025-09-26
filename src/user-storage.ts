@@ -1,5 +1,6 @@
 import { MMKV } from "react-native-mmkv";
 import { logger } from "~/logger";
+import { Lines, Polygon } from "./hooks/use-saved-shapes";
 import { Classifiers, classifiersSchema } from "./types/classifiers";
 import { Config } from "./types/config";
 import { Contract } from "./types/contracts";
@@ -9,7 +10,7 @@ import { Features } from "./types/features";
 import { FormState } from "./types/form-state";
 import { HuntActivity } from "./types/hunt-activities";
 import { HuntedAnimal } from "./types/hunted-animals";
-import { Hunt } from "./types/hunts";
+import { Hunt, HuntsRequestTiming } from "./types/hunts";
 import { Infrastructure, InfrastructureChange } from "./types/infrastructure";
 import { Membership } from "./types/mtl";
 import { NewsItem } from "./types/news";
@@ -17,20 +18,22 @@ import { PushNotificationsToken, pushNotificationsTokenSchema } from "./types/no
 import { Permit, permitsSchema } from "./types/permits";
 import { Profile, ProfileName } from "./types/profile";
 import { Report } from "./types/report";
+import { UnlimitedHuntedAnimal } from "./types/unlimited-hunted-animals";
 
 const keys = {
     classifiers: "Classifiers",
-    contracts: "Contracts",
     config: "Config",
+    contracts: "Contracts",
     districtDamagesPerDistrictId: "DistrictDamagesPerDistrictId",
     districts: "Districts",
     features: "Features",
     formState: "FormState",
     huntActivities: "HuntActivities",
+    huntedAnimals: "HuntedAnimals",
     hunts: "Hunts",
     infrastructure: "Infrastructure",
     infrastructureChanges: "InfrastructureChanges",
-    latestHuntFetchDate: "LatestHuntFetchDate",
+    lastHuntsRequestTiming: "LastHuntsRequestTiming",
     latestSeenDate: "LatestSeenDate",
     memberships: "Memberships",
     news: "News",
@@ -40,8 +43,12 @@ const keys = {
     profileName: "ProfileName",
     pushNotificationsToken: "PushNotificationsToken",
     reports: "Reports",
+    savedLine: "SavedLine",
+    savedPolygon: "SavedPolygon",
     selectedDistrictId: "SelectedDistrictId",
-    huntedAnimals: "HuntedAnimals",
+    unlimitedHuntedAnimals: "UnlimitedHuntedAnimals",
+    visibleLines: "VisibleLines",
+    visiblePolygons: "VisiblePolygons",
 } as const;
 
 export class UserStorage {
@@ -274,12 +281,18 @@ export class UserStorage {
         this.storage.set(keys.hunts, JSON.stringify(hunts));
     }
 
-    public setLatestHuntFetchDate(date: string) {
-        this.storage.set(keys.latestHuntFetchDate, date);
+    public getLastHuntsRequestTiming(): HuntsRequestTiming | undefined {
+        const lastHuntsRequestTiming = this.storage.getString(keys.lastHuntsRequestTiming);
+
+        if (lastHuntsRequestTiming) {
+            return JSON.parse(lastHuntsRequestTiming);
+        }
+
+        return undefined;
     }
 
-    public getLatestHuntFetchDate(): string | undefined {
-        return this.storage.getString(keys.latestHuntFetchDate);
+    public setLastHuntsRequestTiming(lastHuntsRequestTiming: HuntsRequestTiming) {
+        this.storage.set(keys.lastHuntsRequestTiming, JSON.stringify(lastHuntsRequestTiming));
     }
 
     public getHuntActivities(): HuntActivity[] | undefined {
@@ -371,6 +384,19 @@ export class UserStorage {
         this.storage.set(keys.huntedAnimals, JSON.stringify(huntedAnimals));
     }
 
+    public getUnlimitedHuntedAnimals(): UnlimitedHuntedAnimal[] | undefined {
+        const unlimitedHuntedAnimals = this.storage.getString(keys.unlimitedHuntedAnimals);
+
+        if (unlimitedHuntedAnimals) {
+            return JSON.parse(unlimitedHuntedAnimals);
+        }
+        return undefined;
+    }
+
+    public setUnlimitedHuntedAnimals(unlimitedHuntedAnimals: UnlimitedHuntedAnimal[]) {
+        this.storage.set(keys.unlimitedHuntedAnimals, JSON.stringify(unlimitedHuntedAnimals));
+    }
+
     public getInfrastructureChanges(): InfrastructureChange[] | undefined {
         const infrastructureChanges = this.storage.getString(keys.infrastructureChanges);
 
@@ -387,5 +413,79 @@ export class UserStorage {
 
     public deleteInfrastructureChanges() {
         this.storage.delete(keys.infrastructureChanges);
+    }
+
+    public setLinesVisibility(visibleLines: Record<string, boolean>) {
+        this.storage.set(keys.visibleLines, JSON.stringify(visibleLines));
+    }
+
+    public getLinesVisibility(): Record<string, boolean> | undefined {
+        const visibleLines = this.storage.getString(keys.visibleLines);
+
+        if (visibleLines) {
+            return JSON.parse(visibleLines);
+        }
+
+        return undefined;
+    }
+
+    public getSavedLines(): Lines[] {
+        const savedLines = this.storage.getString(keys.savedLine);
+        if (savedLines) {
+            try {
+                return JSON.parse(savedLines);
+            } catch (error) {
+                logger.log("Failed to parse saved lines from storage", error);
+            }
+        }
+        return [];
+    }
+    public setSavedLines(savedLines: Lines[]) {
+        this.storage.set(keys.savedLine, JSON.stringify(savedLines));
+    }
+
+    public deleteSavedLines(lineId?: string) {
+        if (lineId) {
+            const savedLines = this.getSavedLines();
+            const updatedLines = savedLines.filter((line) => line.lineId !== lineId);
+            this.storage.set(keys.savedLine, JSON.stringify(updatedLines));
+        }
+    }
+    public setPolygonsVisibility(visiblePolygons: Record<string, boolean>) {
+        this.storage.set(keys.visiblePolygons, JSON.stringify(visiblePolygons));
+    }
+
+    public getPolygonsVisibility(): Record<string, boolean> | undefined {
+        const visiblePolygons = this.storage.getString(keys.visiblePolygons);
+
+        if (visiblePolygons) {
+            return JSON.parse(visiblePolygons);
+        }
+
+        return undefined;
+    }
+
+    public getSavedPolygons(): Polygon[] {
+        const savedPolygons = this.storage.getString(keys.savedPolygon);
+        if (savedPolygons) {
+            try {
+                return JSON.parse(savedPolygons);
+            } catch (error) {
+                logger.log("Failed to parse saved polygons from storage", error);
+            }
+        }
+        return [];
+    }
+
+    public setSavedPolygons(savedPolygons: Polygon[]) {
+        this.storage.set(keys.savedPolygon, JSON.stringify(savedPolygons));
+    }
+
+    public deleteSavedPolygons(polygonId?: string) {
+        if (polygonId) {
+            const savedPolygons = this.getSavedPolygons();
+            const updatedPolygons = savedPolygons.filter((polygon) => polygon.polygonId !== polygonId);
+            this.storage.set(keys.savedPolygon, JSON.stringify(updatedPolygons));
+        }
     }
 }

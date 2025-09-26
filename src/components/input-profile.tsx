@@ -69,6 +69,8 @@ export const InputProfile = React.forwardRef<TextInput, InputProfileProps>(
     }
 );
 
+InputProfile.displayName = "InputProfile";
+
 const styles = StyleSheet.create({
     container: {
         position: "relative",

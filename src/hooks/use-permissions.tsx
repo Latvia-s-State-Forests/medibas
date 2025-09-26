@@ -11,6 +11,7 @@ import {
     hasPermissionToManageDrivenHunt,
     hasPermissionToManageInfrastructure,
     hasPermissionToRegisterHunt,
+    hasPermissionToViewStatistics,
     hasPermissionToUpdateDistrictMemberRoles,
     hasPermissionToViewDistrictDamages,
     hasPermissionToViewDistrictMemberRoles,
@@ -39,6 +40,7 @@ type Permissions = {
     viewDistrictDamages: boolean;
     viewInfrastructures: boolean;
     viewInfrastructuresLayer: boolean;
+    viewStatistics: boolean;
     createDrivenHunt: () => boolean;
     editDrivenHunt: (districtIds: number[], huntManagerPersonId: number | undefined) => boolean;
     manageDrivenHunt: (huntManagerPersonId: number | undefined) => boolean;
@@ -73,6 +75,7 @@ export function usePermissions(): Permissions {
         viewDistrictDamages: hasPermissionToViewDistrictDamages(profile),
         viewInfrastructures: hasPermissionToViewInfrastructures(profile),
         viewInfrastructuresLayer: hasPermissionToViewInfrastructuresLayer(profile, selectedDistrictId),
+        viewStatistics: hasPermissionToViewStatistics(profile),
         createDrivenHunt: () => hasPermissionToCreateDrivenHunt(profile),
         editDrivenHunt: (districtIds, huntManagerPersonId) =>
             hasPermissionToEditDrivenHunt(profile, districtIds, huntManagerPersonId),

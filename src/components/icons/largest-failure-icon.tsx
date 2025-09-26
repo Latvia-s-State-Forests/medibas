@@ -1,0 +1,23 @@
+import * as React from "react";
+import Svg, { Path } from "react-native-svg";
+import { Color, theme } from "~/theme";
+
+type LargestFailureIconProps = {
+    width?: number;
+    height?: number;
+    color?: Color;
+};
+
+export function LargestFailureIcon({ width = 96, height = 96, color = "error" }: LargestFailureIconProps) {
+    const fillColor = theme.color[color as keyof typeof theme.color];
+    return (
+        <Svg width={width} height={height} viewBox="0 0 96 96" fill={fillColor}>
+            <Path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M48 92c24.3 0 44-19.7 44-44S72.3 4 48 4 4 23.7 4 48s19.7 44 44 44Zm0-4c22.091 0 40-17.909 40-40a39.852 39.852 0 0 0-10.255-26.745c-.893-.991-2.82-2.837-2.82-2.837C67.818 11.946 58.37 8 48 8 25.909 8 8 25.909 8 48c0 10.37 3.946 19.818 10.418 26.925a40.254 40.254 0 0 0 2.837 2.82A39.852 39.852 0 0 0 48 88Z"
+            />
+            <Path d="M77.745 21.255c-.893-.991-2.82-2.837-2.82-2.837L18.418 74.925a40.254 40.254 0 0 0 2.837 2.82l56.49-56.49Z" />
+        </Svg>
+    );
+}

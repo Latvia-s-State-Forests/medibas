@@ -1,5 +1,5 @@
 import { useNavigation } from "@react-navigation/native";
-import { useInterpret } from "@xstate/react";
+import { useActorRef } from "@xstate/react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
@@ -14,6 +14,7 @@ import { configuration } from "~/configuration";
 import { useMemberships } from "~/hooks/use-memberships";
 import { usePermissions } from "~/hooks/use-permissions";
 import { useProfile } from "~/hooks/use-profile";
+import { logger } from "~/logger";
 import { theme } from "~/theme";
 import { Member, MemberRole } from "~/types/mtl";
 import { DeleteMemberStatusDialog, deleteMemberMachine } from "./delete-member-status-dialog";
@@ -26,7 +27,16 @@ export function MemberManagementScreen() {
     const memberships = useMemberships();
     const profile = useProfile();
     const permissions = usePermissions();
-    const service = useInterpret(() => deleteMemberMachine);
+    const actor = useActorRef(deleteMemberMachine, {
+        inspect: (inspectEvent) => {
+            if (inspectEvent.type === "@xstate.snapshot") {
+                const snapshot = inspectEvent.actorRef?.getSnapshot();
+                if (snapshot?.machine?.id === deleteMemberMachine.id) {
+                    logger.log("DM " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event));
+                }
+            }
+        },
+    });
 
     function onDeleteModalOpen(member: Member, selectedDistrictId: number) {
         const districts: Array<{ id: number; name: string }> = [];
@@ -40,7 +50,7 @@ export function MemberManagementScreen() {
         }
 
         if (districts.length === 1) {
-            service.send({ type: "DELETE_FROM_SINGLE_DISTRICT", member, district: districts[0] });
+            actor.send({ type: "DELETE_FROM_SINGLE_DISTRICT", member, district: districts[0] });
         } else if (districts.length > 1) {
             navigation.navigate("MemberDeletionModal", {
                 member,
@@ -135,7 +145,7 @@ export function MemberManagementScreen() {
                 ))}
             </ScrollView>
 
-            <DeleteMemberStatusDialog service={service} />
+            <DeleteMemberStatusDialog actor={actor} />
         </View>
     );
 }

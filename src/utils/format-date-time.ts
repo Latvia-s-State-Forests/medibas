@@ -18,3 +18,9 @@ export function formatDate(date: string) {
 export function formatTime(date: string) {
     return format(new Date(date), "HH:mm");
 }
+
+export function formatHuntDate(plannedFrom?: string, plannedTo?: string) {
+    const dateFrom = formatDate(plannedFrom ?? "");
+    const dateTo = formatDate(plannedTo ?? "");
+    return dateFrom !== dateTo ? `${dateFrom} - ${dateTo}` : dateFrom;
+}

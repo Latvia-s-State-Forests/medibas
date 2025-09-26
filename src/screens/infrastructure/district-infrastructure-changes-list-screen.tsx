@@ -94,7 +94,7 @@ export function DistrictInfrastructureChangesListScreen() {
                                     name={
                                         configuration.huntingInfrastructure.typeIcons[
                                             infrastructure.typeId as HuntingInfrastructureTypeId
-                                        ] ?? "report"
+                                        ] ?? "cross"
                                     }
                                 />
                                 <View style={styles.itemContent}>

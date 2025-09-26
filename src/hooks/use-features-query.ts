@@ -8,14 +8,19 @@ import { Features } from "~/types/features";
 export function useFeaturesQuery() {
     const userStorage = useUserStorage();
 
-    return useQuery<Features>(queryKeys.features, () => api.getFeatures(), {
-        initialData: userStorage.getFeatures(),
-        onSuccess: (features) => {
-            logger.log("Features loaded");
-            userStorage.setFeatures(features);
+    return useQuery<Features>({
+        queryKey: queryKeys.features,
+        queryFn: async () => {
+            try {
+                const features = await api.getFeatures();
+                logger.log("Features loaded");
+                userStorage.setFeatures(features);
+                return features;
+            } catch (error) {
+                logger.error("Failed to load features", error);
+                throw error;
+            }
         },
-        onError: (error) => {
-            logger.error("Failed to load features", error);
-        },
+        initialData: () => userStorage.getFeatures(),
     });
 }

@@ -23,10 +23,10 @@ import { IndividualHuntingCardExampleScreen } from "~/components/individual-hunt
 import { InputExampleScreen } from "~/components/input.example";
 import { PressableListItemExampleScreen } from "~/components/list/pressable-list-item.example";
 import { LogoutButtonExampleScreen } from "~/components/logout-button.example";
-import { MapPinExampleScreen } from "~/components/map-pin.example";
 import { ModalExampleScreen } from "~/components/modal/modal.example";
 import { MultiSelectExampleScreen } from "~/components/multi-select.example";
-import { NavigationButtonExampleScreen } from "~/components/navigation-button.example";
+import { NavigationButtonFieldExampleScreen } from "~/components/navigation-button-field.example";
+import { NewsListItemExampleScreen } from "~/components/news-list-item.example";
 import { PositionSelectExampleScreen } from "~/components/position-select.example";
 import { QRContainerExampleScreen } from "~/components/qr-code/qr-container.example";
 import { RadioButtonGridExampleScreen } from "~/components/radio-button-grid.example";
@@ -47,6 +47,9 @@ import { TypeFieldExampleScreen } from "~/components/type-field.example";
 import { ComponentExamplesListScreen } from "~/screens/component-examples-list-screen";
 import { HuntLocationViewerExampleScreen } from "~/screens/hunt/driven-hunt/hunt-location-viewer.example";
 import { MenuListItemExampleScreen } from "~/screens/menu/menu-list-item.example";
+import { SpeciesStatisticsReportItemExampleScreen } from "~/screens/statistics/species/species-statistics-report-item.example";
+import { StatisticsHuntInfoCardExampleScreen } from "~/screens/statistics/statistics-hunt-info-card-example";
+import { StatisticsSummaryRowExampleScreen } from "~/screens/statistics/statistics-summary-row.example";
 import { ComponentExamplesNavigatorParams } from "~/types/navigation";
 
 const ExamplesStack = createNativeStackNavigator<ComponentExamplesNavigatorParams>();
@@ -87,11 +90,14 @@ export function ComponentExamplesNavigator() {
             <ExamplesStack.Screen name="PositionSelectExampleScreen" component={PositionSelectExampleScreen} />
             <ExamplesStack.Screen name="PressableListItemExampleScreen" component={PressableListItemExampleScreen} />
             <ExamplesStack.Screen name="LogoutButtonExampleScreen" component={LogoutButtonExampleScreen} />
-            <ExamplesStack.Screen name="MapPinExampleScreen" component={MapPinExampleScreen} />
             <ExamplesStack.Screen name="MenuListItemExampleScreen" component={MenuListItemExampleScreen} />
             <ExamplesStack.Screen name="ModalExampleScreen" component={ModalExampleScreen} />
             <ExamplesStack.Screen name="MultiSelectExampleScreen" component={MultiSelectExampleScreen} />
-            <ExamplesStack.Screen name="NavigationButtonExampleScreen" component={NavigationButtonExampleScreen} />
+            <ExamplesStack.Screen
+                name="NavigationButtonFieldExampleScreen"
+                component={NavigationButtonFieldExampleScreen}
+            />
+            <ExamplesStack.Screen name="NewsListItemExampleScreen" component={NewsListItemExampleScreen} />
             <ExamplesStack.Screen name="QRCodeContainerExampleScreen" component={QRContainerExampleScreen} />
             <ExamplesStack.Screen name="RadioButtonExampleScreen" component={RadioButtonExampleScreen} />
             <ExamplesStack.Screen name="RadioButtonGridExampleScreen" component={RadioButtonGridExampleScreen} />
@@ -104,8 +110,20 @@ export function ComponentExamplesNavigator() {
             />
             <ExamplesStack.Screen name="SegmentedControlExampleScreen" component={SegmentedControlExampleScreen} />
             <ExamplesStack.Screen name="SelectExampleScreen" component={SelectExampleScreen} />
+            <ExamplesStack.Screen
+                name="SpeciesStatisticsReportItemExampleScreen"
+                component={SpeciesStatisticsReportItemExampleScreen}
+            />
             <ExamplesStack.Screen name="SpinnerExampleScreen" component={SpinnerExampleScreen} />
+            <ExamplesStack.Screen
+                name="StatisticsHuntInfoCardExampleScreen"
+                component={StatisticsHuntInfoCardExampleScreen}
+            />
             <ExamplesStack.Screen name="SquareIconButtonExampleScreen" component={SquareIconButtonExampleScreen} />
+            <ExamplesStack.Screen
+                name="StatisticsSummaryRowExampleScreen"
+                component={StatisticsSummaryRowExampleScreen}
+            />
             <ExamplesStack.Screen name="StepperExampleScreen" component={StepperExampleScreen} />
             <ExamplesStack.Screen name="SwitchExampleScreen" component={SwitchExampleScreen} />
             <ExamplesStack.Screen name="TabBarExampleScreen" component={TabBarExampleScreen} />

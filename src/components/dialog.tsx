@@ -2,7 +2,7 @@ import * as React from "react";
 import { StyleSheet, View } from "react-native";
 import RnModal from "react-native-modal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { IconName, LargestIcon } from "~/components/icon";
+import { LargestIcon, LargestIconName } from "~/components/icon";
 import { theme } from "~/theme";
 import { Text } from "./text";
 
@@ -37,7 +37,7 @@ export function Dialog(props: DialogProps) {
                 {props.icon ? (
                     <View style={styles.iconContainer}>
                         {typeof props.icon === "string" ? (
-                            <LargestIcon name={props.icon as IconName<96>} />
+                            <LargestIcon name={props.icon as LargestIconName} />
                         ) : (
                             props.icon
                         )}

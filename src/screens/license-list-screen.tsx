@@ -5,8 +5,8 @@ import { FlatList, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Header } from "~/components/header";
 import { Text } from "~/components/text";
+import licenses from "~/licenses.json";
 import { theme } from "~/theme";
-import licenses from "../../licenses.json";
 
 export function LicenseListScreen() {
     const { t } = useTranslation();

@@ -1,4 +1,4 @@
-import produce from "immer";
+import { produce } from "immer";
 import { configuration } from "~/configuration";
 import { HuntActivity, HuntActivityType } from "~/types/hunt-activities";
 import { Hunt, HuntEventStatus } from "~/types/hunts";
@@ -6,13 +6,15 @@ import { Hunt, HuntEventStatus } from "~/types/hunts";
 export function combineHuntsWithActivities(
     hunts: Hunt[],
     activities: HuntActivity[],
-    latestHuntFetchDate: string | undefined
+    latestHuntsRequestStartedAtDate: string | undefined
 ): Hunt[] {
     if (activities.length === 0) {
         return hunts;
     }
 
-    const getLatestHuntFetchDate = latestHuntFetchDate ? new Date(latestHuntFetchDate) : new Date(0);
+    const huntsRequestStartedAtDate = latestHuntsRequestStartedAtDate
+        ? new Date(latestHuntsRequestStartedAtDate)
+        : new Date(0);
 
     const huntById = new Map<number, Hunt>();
     for (const hunt of hunts) {
@@ -22,9 +24,10 @@ export function combineHuntsWithActivities(
     }
 
     for (const activity of activities) {
-        // skips activities if the latest fetched date is newer than the sent date but don't skip if sentDate is missing
+        // skips activities if the latest hunts request started at date is newer than the sent date, but don't skip if
+        // sentDate is missing
         const activityDate = activity.sentDate ? new Date(activity.sentDate) : undefined;
-        if (activityDate && activityDate < getLatestHuntFetchDate) {
+        if (activityDate && activityDate < huntsRequestStartedAtDate) {
             continue;
         }
 

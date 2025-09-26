@@ -1,10 +1,8 @@
 import NetInfo from "@react-native-community/netinfo";
-import { useMachine } from "@xstate/react";
 import { randomUUID } from "expo-crypto";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { match, P } from "ts-pattern";
-import { assign, createMachine } from "xstate";
+import { match } from "ts-pattern";
 import { api } from "~/api";
 import { Button } from "~/components/button";
 import { QRScannerModal } from "~/components/qr-code/qr-scanner-modal";
@@ -22,212 +20,82 @@ import { HunterConfirmation } from "./hunter-confirmation";
 import { LoadingMessage } from "./loading-message";
 import { SuccessMessage } from "./success-message";
 
-const joinDrivenHuntUsingCodeMachine = createMachine(
-    {
-        id: "joinDrivenHuntUsingCode",
-        schema: {
-            events: {} as
-                | { type: "OPEN_SCANNER" }
-                | { type: "CLOSE_SCANNER" }
-                | { type: "SCANNER_SUCCESS"; title: string; eventGuid: string }
-                | { type: "SCANNER_FAILURE" }
-                | {
-                      type: "CONFIRMATION_CONFIRMED";
-                      eventGuid: string;
-                      participantGuid: string;
-                      fullName: string;
-                      role: ParticipantRole;
-                  }
-                | { type: "CONFIRMATION_REJECTED" }
-                | { type: "JOIN_SUCCESS" }
-                | { type: "JOIN_FAILURE_NETWORK" }
-                | { type: "JOIN_FAILURE_CODE"; errorCode: number }
-                | { type: "JOIN_FAILURE_OTHER" }
-                | { type: "SUCCESS_CONFIRMED" }
-                | { type: "FAILURE_CONFIRMED" },
-            context: {} as { errorCode?: number },
-        },
-        initial: "idle",
-        states: {
-            idle: {
-                on: {
-                    OPEN_SCANNER: { target: "scanning" },
-                },
-            },
-            scanning: {
-                on: {
-                    CLOSE_SCANNER: { target: "idle" },
-                    SCANNER_SUCCESS: { target: "confirming" },
-                    SCANNER_FAILURE: { target: "failureScanner" },
-                },
-            },
-            confirming: {
-                on: {
-                    CONFIRMATION_CONFIRMED: { target: "joining" },
-                    CONFIRMATION_REJECTED: { target: "scanning" },
-                },
-            },
-            joining: {
-                on: {
-                    JOIN_SUCCESS: { target: "success" },
-                    JOIN_FAILURE_NETWORK: { target: "failureNetwork" },
-                    JOIN_FAILURE_CODE: { target: "failureCode", actions: ["setErrorCode"] },
-                    JOIN_FAILURE_OTHER: { target: "failureOther" },
-                },
-                invoke: { src: "join" },
-            },
-            success: {
-                initial: "idle",
-                states: {
-                    idle: {
-                        on: {
-                            SUCCESS_CONFIRMED: { target: "closing" },
-                        },
-                    },
-                    closing: {
-                        after: {
-                            300: { target: "#joinDrivenHuntUsingCode.idle" },
-                        },
-                    },
-                },
-            },
-            failureScanner: {
-                initial: "idle",
-                states: {
-                    idle: {
-                        on: {
-                            FAILURE_CONFIRMED: { target: "closing" },
-                        },
-                    },
-                    closing: {
-                        after: {
-                            300: { target: "#joinDrivenHuntUsingCode.idle" },
-                        },
-                    },
-                },
-            },
-            failureNetwork: {
-                initial: "idle",
-                states: {
-                    idle: {
-                        on: {
-                            FAILURE_CONFIRMED: { target: "closing" },
-                        },
-                    },
-                    closing: {
-                        after: {
-                            300: { target: "#joinDrivenHuntUsingCode.idle" },
-                        },
-                    },
-                },
-            },
-            failureCode: {
-                initial: "idle",
-                states: {
-                    idle: {
-                        on: {
-                            FAILURE_CONFIRMED: { target: "closing" },
-                        },
-                    },
-                    closing: {
-                        after: {
-                            300: { target: "#joinDrivenHuntUsingCode.idle", actions: ["resetErrorCode"] },
-                        },
-                    },
-                },
-            },
-            failureOther: {
-                initial: "idle",
-                states: {
-                    idle: {
-                        on: {
-                            FAILURE_CONFIRMED: { target: "closing" },
-                        },
-                    },
-                    closing: {
-                        after: {
-                            300: { target: "#joinDrivenHuntUsingCode.idle" },
-                        },
-                    },
-                },
-            },
-        },
-        preserveActionOrder: true,
-        predictableActionArguments: true,
-    },
-    {
-        actions: {
-            setErrorCode: assign({
-                errorCode: (context, event) => {
-                    if (event.type === "JOIN_FAILURE_CODE") {
-                        return event.errorCode;
-                    }
-                    return context.errorCode;
-                },
-            }),
-            resetErrorCode: assign({
-                errorCode: undefined,
-            }),
-        },
-        services: {
-            join: (context, event) => (send) => {
-                if (event.type !== "CONFIRMATION_CONFIRMED") {
-                    logger.error(`Expected event type "CONFIRMATION_CONFIRMED", got "${event.type}"`);
-                    send({ type: "JOIN_FAILURE_OTHER" });
-                    return;
-                }
-
-                async function join(
-                    eventGuid: string,
-                    participantGuid: string,
-                    fullName: string,
-                    participantRoleId: ParticipantRole
-                ) {
-                    try {
-                        const network = await NetInfo.fetch();
-                        if (!network.isConnected || !network.isInternetReachable) {
-                            send({ type: "JOIN_FAILURE_NETWORK" });
-                            return;
-                        }
-
-                        const result = await api.joinHunt({ eventGuid, participantGuid, fullName, participantRoleId });
-                        if (!result.success) {
-                            if (result.errorCode) {
-                                send({ type: "JOIN_FAILURE_CODE", errorCode: result.errorCode });
-                            } else {
-                                send({ type: "JOIN_FAILURE_OTHER" });
-                            }
-                            return;
-                        }
-
-                        await queryClient.invalidateQueries(queryKeys.hunts);
-
-                        send({ type: "JOIN_SUCCESS" });
-                    } catch (error) {
-                        logger.error("Failed to join hunt due to an unexpected error", error);
-                        send({ type: "JOIN_FAILURE_OTHER" });
-                    }
-                }
-                join(event.eventGuid, event.participantGuid, event.fullName, event.role);
-            },
-        },
-    }
-);
-
 export function JoinDrivenHuntUsingCode() {
     const { t } = useTranslation();
     const profile = useProfile();
     const classifiers = useClassifiers();
-    const [state, send, service] = useMachine(() => joinDrivenHuntUsingCodeMachine);
+    const [showScannerModal, setShowScannerModal] = React.useState(false);
+    const [showStatusModal, setShowStatusModal] = React.useState(false);
+    const [status, setStatus] = React.useState<
+        | { type: "idle" }
+        | { type: "confirming"; title: string; eventGuid: string }
+        | { type: "joining" }
+        | { type: "success" }
+        | { type: "failureScanner" }
+        | { type: "failureNetwork" }
+        | { type: "failureCode"; errorCode: number }
+        | { type: "failureOther" }
+    >({
+        type: "idle",
+    });
 
-    React.useEffect(() => {
-        const subscription = service.subscribe((state) => {
-            const message = "JDHUC " + JSON.stringify(state.value) + " " + JSON.stringify(state.event);
-            logger.log(message);
-        });
+    async function onScanned(qrCode: string) {
+        if (!showScannerModal || showStatusModal) {
+            return;
+        }
 
-        return () => subscription.unsubscribe();
-    }, [service]);
+        try {
+            const { eventGuid, vmdCode, districts, plannedFrom } = decodeHuntQrCode(qrCode);
+            const title = getHuntTitle(vmdCode, districts, plannedFrom);
+            setStatus({ type: "confirming", title, eventGuid });
+            setShowStatusModal(true);
+            logger.log("JDHUC", "Scanner success", { title, eventGuid });
+        } catch (error) {
+            setStatus({ type: "failureScanner" });
+            setShowStatusModal(true);
+            logger.log("JDHUC", "Scanner failure", qrCode, error);
+        }
+    }
+
+    async function onConfirm(eventGuid: string, role: ParticipantRole) {
+        logger.log("JDHUC", "Join confirmed", { eventGuid, role });
+        try {
+            setStatus({ type: "joining" });
+            const network = await NetInfo.fetch();
+            if (!network.isConnected || !network.isInternetReachable) {
+                setStatus({ type: "failureNetwork" });
+                logger.log("JDHUC", "Join network failure");
+                return;
+            }
+
+            const result = await api.joinHunt({
+                eventGuid,
+                participantGuid: randomUUID(),
+                fullName: [profile.firstName, profile.lastName].join(" "),
+                participantRoleId: role,
+            });
+
+            if (!result.success) {
+                if (result.errorCode) {
+                    setStatus({ type: "failureCode", errorCode: result.errorCode });
+                    logger.log("JDHUC", "Join code failure", result.errorCode);
+                } else {
+                    setStatus({ type: "failureOther" });
+                    logger.log("JDHUC", "Join other failure");
+                }
+                return;
+            }
+
+            await queryClient.invalidateQueries({ queryKey: queryKeys.hunts });
+
+            setStatus({ type: "success" });
+            logger.log("JDHUC", "Join success");
+        } catch (error) {
+            logger.error("Failed to join hunt due to an unexpected error", error);
+            setStatus({ type: "failureOther" });
+            logger.log("JDHUC", "Join other failure");
+        }
+    }
 
     return (
         <>
@@ -236,123 +104,108 @@ export function JoinDrivenHuntUsingCode() {
                 title={t("hunt.drivenHunt.join.scan")}
                 variant="secondary-dark"
                 onPress={() => {
-                    if (state.can("OPEN_SCANNER")) {
-                        send({ type: "OPEN_SCANNER" });
-                    }
+                    setShowScannerModal(true);
+                    logger.log("JDHUC", "Open scanner");
                 }}
             />
             <QRScannerModal
-                visible={
-                    !state.matches("idle") &&
-                    !state.matches({ success: "closing" }) &&
-                    !state.matches({ failureScanner: "closing" }) &&
-                    !state.matches({ failureNetwork: "closing" }) &&
-                    !state.matches({ failureCode: "closing" }) &&
-                    !state.matches({ failureOther: "closing" })
-                }
+                visible={showScannerModal}
                 onClose={() => {
-                    if (state.can("CLOSE_SCANNER")) {
-                        send({ type: "CLOSE_SCANNER" });
-                    }
+                    setShowStatusModal(false);
+                    setShowScannerModal(false);
+                    logger.log("JDHUC", "Close scanner");
                 }}
-                onScanned={(qrCode) => {
-                    if (!state.matches("scanning")) {
-                        return;
-                    }
-                    try {
-                        const { eventGuid, vmdCode, districts, plannedFrom } = decodeHuntQrCode(qrCode);
-                        const title = getHuntTitle(vmdCode, districts, plannedFrom);
-                        send({ type: "SCANNER_SUCCESS", title, eventGuid });
-                    } catch (error) {
-                        logger.error("Failed to scan hunt qr code", qrCode, error);
-                        send({ type: "SCANNER_FAILURE" });
-                    }
-                }}
+                onScanned={onScanned}
             >
                 <Modal
-                    visible={!state.matches("scanning")}
+                    visible={showStatusModal}
                     onBackButtonPress={() => {
-                        if (state.can("CONFIRMATION_REJECTED")) {
-                            send({ type: "CONFIRMATION_REJECTED" });
+                        if (status.type !== "joining") {
+                            setShowStatusModal(false);
+                            logger.log("JDHUC", "Close status");
                         }
                     }}
                 >
-                    {match(state)
-                        .with({ value: "confirming", event: { type: "SCANNER_SUCCESS" } }, (state) => {
-                            const { title, eventGuid } = state.event;
+                    {match(status)
+                        .with({ type: "confirming" }, (status) => {
                             return (
                                 <HunterConfirmation
-                                    huntTitle={title}
+                                    huntTitle={status.title}
                                     onConfirm={(role) => {
-                                        send({
-                                            type: "CONFIRMATION_CONFIRMED",
-                                            eventGuid,
-                                            participantGuid: randomUUID(),
-                                            fullName: [profile.firstName, profile.lastName].join(" "),
-                                            role,
-                                        });
+                                        onConfirm(status.eventGuid, role);
                                     }}
                                     onReject={() => {
-                                        send({ type: "CONFIRMATION_REJECTED" });
+                                        setShowStatusModal(false);
+                                        logger.log("JDHUC", "Join rejected");
                                     }}
                                 />
                             );
                         })
-                        .with({ value: "joining" }, () => {
+                        .with({ type: "joining" }, () => {
                             return <LoadingMessage title={t("hunt.drivenHunt.join.joining.title")} />;
                         })
-                        .with({ value: { success: P.any } }, () => {
+                        .with({ type: "success" }, () => {
                             return (
                                 <SuccessMessage
                                     onContinue={() => {
-                                        send({ type: "SUCCESS_CONFIRMED" });
+                                        setShowStatusModal(false);
+                                        setShowScannerModal(false);
+                                        logger.log("JDHUC", "Success confirmed");
                                     }}
                                 />
                             );
                         })
-                        .with({ value: { failureScanner: P.any } }, () => {
+                        .with({ type: "failureScanner" }, () => {
                             return (
                                 <FailureMessage
                                     title={t("hunt.drivenHunt.join.failureScanner.title")}
                                     description={t("hunt.drivenHunt.join.failureScanner.description")}
                                     onClose={() => {
-                                        send({ type: "FAILURE_CONFIRMED" });
+                                        setShowStatusModal(false);
+                                        setShowScannerModal(false);
+                                        logger.log("JDHUC", "Scanner failure confirmed");
                                     }}
                                 />
                             );
                         })
-                        .with({ value: { failureNetwork: P.any } }, () => {
+                        .with({ type: "failureNetwork" }, () => {
                             return (
                                 <FailureMessage
                                     title={t("hunt.drivenHunt.join.failureNetwork.title")}
                                     description={t("hunt.drivenHunt.join.failureNetwork.description")}
                                     onClose={() => {
-                                        send({ type: "FAILURE_CONFIRMED" });
+                                        setShowStatusModal(false);
+                                        setShowScannerModal(false);
+                                        logger.log("JDHUC", "Network failure confirmed");
                                     }}
                                 />
                             );
                         })
-                        .with({ value: { failureCode: P.any }, context: { errorCode: P.number } }, (state) => {
+                        .with({ type: "failureCode" }, (status) => {
                             const description =
-                                getErrorMessageFromApi(state.context.errorCode, classifiers) ??
+                                getErrorMessageFromApi(status.errorCode, classifiers) ??
                                 t("hunt.drivenHunt.join.failureErrorCode.descriptionFallback");
                             return (
                                 <FailureMessage
                                     title={t("hunt.drivenHunt.join.failureErrorCode.title")}
                                     description={description}
                                     onClose={() => {
-                                        send({ type: "FAILURE_CONFIRMED" });
+                                        setShowStatusModal(false);
+                                        setShowScannerModal(false);
+                                        logger.log("JDHUC", "Code failure confirmed");
                                     }}
                                 />
                             );
                         })
-                        .with({ value: { failureOther: P.any } }, () => {
+                        .with({ type: "failureOther" }, () => {
                             return (
                                 <FailureMessage
                                     title={t("hunt.drivenHunt.join.failureOther.title")}
                                     description={t("hunt.drivenHunt.join.failureOther.description")}
                                     onClose={() => {
-                                        send({ type: "FAILURE_CONFIRMED" });
+                                        setShowStatusModal(false);
+                                        setShowScannerModal(false);
+                                        logger.log("JDHUC", "Other failure confirmed");
                                     }}
                                 />
                             );

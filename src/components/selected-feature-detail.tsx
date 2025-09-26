@@ -6,10 +6,12 @@ import { ReadOnlyField } from "~/components/read-only-field";
 import { useClassifiers } from "~/hooks/use-classifiers";
 import { getAppLanguage } from "~/i18n";
 import { DistrictDamageFields } from "~/screens/damage/district-damage/district-damage-fields";
+import { DistrictUnlimitedHuntedAnimalFields } from "~/screens/hunt/district-unlimited-hunted-animal-fields";
 import { DistrictDamage } from "~/types/district-damages";
 import { Feature } from "~/types/features";
 import { HuntedAnimal } from "~/types/hunted-animals";
 import { Infrastructure } from "~/types/infrastructure";
+import { UnlimitedHuntedAnimal } from "~/types/unlimited-hunted-animals";
 import { getDescriptionForClassifierOption } from "~/utils/classifiers";
 import { formatDateTime } from "~/utils/format-date-time";
 import { DistrictHuntedAnimalFields } from "../screens/hunt/district-hunted-animal-fields";
@@ -26,6 +28,7 @@ type SelectedFeatureDetailProps = {
         | (HuntedAnimal & { featureType: "district-hunted-moose" })
         | (HuntedAnimal & { featureType: "district-hunted-roe-deer" })
         | (HuntedAnimal & { featureType: "district-hunted-boar" })
+        | (UnlimitedHuntedAnimal & { featureType: "district-hunted-others-unlimited" })
         | undefined;
 };
 
@@ -41,6 +44,8 @@ export default function SelectedFeatureDetail(props: SelectedFeatureDetailProps)
     const { t } = useTranslation();
     const classifiers = useClassifiers();
     const language = getAppLanguage();
+    const UNKNOWN_SPECIES = t("features.unknownSpecies");
+    const UNKNOWN_TYPE = t("features.unknownType");
 
     if (!props.selectedFeatureData) {
         return (
@@ -64,6 +69,10 @@ export default function SelectedFeatureDetail(props: SelectedFeatureDetailProps)
         return animatedScrollView(<DistrictHuntedAnimalFields huntedAnimal={props.selectedFeatureData} />);
     }
 
+    if (props.selectedFeatureData.featureType === "district-hunted-others-unlimited") {
+        return animatedScrollView(<DistrictUnlimitedHuntedAnimalFields huntedAnimal={props.selectedFeatureData} />);
+    }
+
     if (props.selectedFeatureData.featureType === "district-infrastructures") {
         return animatedScrollView(<DistrictInfrastructureFields infrastructure={props.selectedFeatureData} />);
     } else {
@@ -71,13 +80,22 @@ export default function SelectedFeatureDetail(props: SelectedFeatureDetailProps)
         const observationTypeId = props.selectedFeatureData.properties.observationTypeId;
         const damageTypeId = props.selectedFeatureData.properties.type;
         const speciesId = props.selectedFeatureData.properties.speciesId;
-        const species = getDescriptionForClassifierOption(classifiers.animalSpecies.options, language, speciesId);
-        const damageType = getDescriptionForClassifierOption(classifiers.damageTypes.options, language, damageTypeId);
-        const observationType = getDescriptionForClassifierOption(
-            classifiers.observationTypes.options,
-            language,
-            observationTypeId
-        );
+        const species =
+            getDescriptionForClassifierOption(classifiers.animalSpecies.options, language, speciesId) ??
+            UNKNOWN_SPECIES;
+        const damageType =
+            props.selectedFeatureData.featureType === "damages"
+                ? (getDescriptionForClassifierOption(classifiers.damageTypes.options, language, damageTypeId) ??
+                  UNKNOWN_TYPE)
+                : undefined;
+        const observationType =
+            props.selectedFeatureData.featureType === "observations"
+                ? (getDescriptionForClassifierOption(
+                      classifiers.observationTypes.options,
+                      language,
+                      observationTypeId
+                  ) ?? UNKNOWN_TYPE)
+                : undefined;
 
         return (
             <Animated.View style={styles.scroll} entering={FadeInRight} exiting={FadeOutRight}>

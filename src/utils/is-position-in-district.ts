@@ -1,5 +1,5 @@
-import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
-import buffer from "@turf/buffer";
+import { booleanPointInPolygon } from "@turf/boolean-point-in-polygon";
+import { buffer } from "@turf/buffer";
 import { point } from "@turf/helpers";
 import { Config } from "~/types/config";
 import { District } from "~/types/districts";
@@ -27,6 +27,10 @@ export function isPositionInDistrict(
             Number(config.gpsMinAccuracy),
             { units: "meters" }
         );
+
+        if (!bufferedPolygon) {
+            return false;
+        }
 
         return booleanPointInPolygon(pointPosition, bufferedPolygon);
     }

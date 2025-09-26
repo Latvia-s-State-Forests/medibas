@@ -32,8 +32,8 @@ export function PermitsScreen() {
     useFocusEffect(
         React.useCallback(() => {
             InteractionManager.runAfterInteractions(() => {
-                queryClient.invalidateQueries(queryKeys.permits);
-                queryClient.invalidateQueries(queryKeys.contracts);
+                queryClient.invalidateQueries({ queryKey: queryKeys.permits });
+                queryClient.invalidateQueries({ queryKey: queryKeys.contracts });
             });
         }, [])
     );

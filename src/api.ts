@@ -18,6 +18,7 @@ import {
     Hunt,
     HuntEvent,
     huntEventSchema,
+    HuntsRequestTiming,
     huntsSchema,
     JoinHuntBody,
 } from "./types/hunts";
@@ -28,9 +29,19 @@ import { PushNotificationsToken } from "./types/notifications";
 import { Permit, permitSchema } from "./types/permits";
 import { Profile, profileSchema } from "./types/profile";
 import { Report, ReportSyncError, ReportSyncResult } from "./types/report";
+import {
+    StatisticsSpeciesItem,
+    statisticsSpeciesResponseSchema,
+    IndividualHuntStatisticsItem,
+    individualHuntStatisticsResponseSchema,
+    DrivenHuntStatisticsItem,
+    drivenHuntStatisticsResponseSchema,
+} from "./types/statistics";
+import { UnlimitedHuntedAnimal, unlimitedHuntedAnimalsSchema } from "./types/unlimited-hunted-animals";
 import { getAppVersion } from "./utils/get-app-version";
+import { getReportRequestFormData } from "./utils/get-report-request-form-data";
+import { getReportRequestUrl } from "./utils/get-report-request-url";
 import { parsePostReportResponse } from "./utils/parse-post-report-response";
-import { getPhotoForFormData } from "./utils/photo";
 
 export interface RegisterMemberBody {
     cardNumber: string;
@@ -205,13 +216,27 @@ class Api {
         return headers;
     }
 
+    private async request<T>(options: {
+        method: "GET" | "POST" | "DELETE";
+        path: string;
+        schema: z.Schema<T>;
+        body?: unknown;
+        headers?: Record<string, string>;
+    }): Promise<T>;
     private async request(options: {
         method: "GET" | "POST" | "DELETE";
         path: string;
-        schema?: z.Schema;
+        schema?: undefined;
         body?: unknown;
         headers?: Record<string, string>;
-    }) {
+    }): Promise<undefined>;
+    private async request<T>(options: {
+        method: "GET" | "POST" | "DELETE";
+        path: string;
+        schema?: z.Schema<T>;
+        body?: unknown;
+        headers?: Record<string, string>;
+    }): Promise<T | undefined> {
         let headers = await this.getRequestHeaders();
         if (options.headers) {
             headers = { ...headers, ...options.headers };
@@ -257,21 +282,20 @@ class Api {
     }
 
     public async getContracts(): Promise<Contract[]> {
-        const { contracts } = await this.request({
+        const response = await this.request({
             method: "GET",
             path: "/user/contracts",
             schema: getContractsResponseSchema,
         });
-        return contracts;
+        return response.contracts;
     }
 
     public async getDistrictDamagesPerDistrictId(): Promise<DistrictDamagesPerDistrictId> {
-        const damages = await this.request({
+        return this.request({
             method: "GET",
             path: "/damages",
             schema: districtDamagesPerDistrictIdSchema,
         });
-        return damages;
     }
 
     public getDistricts(): Promise<District[]> {
@@ -279,7 +303,7 @@ class Api {
     }
 
     public async getFeatures(): Promise<Features> {
-        const features: Features = await this.request({ method: "GET", path: "/features", schema: featuresSchema });
+        const features = await this.request({ method: "GET", path: "/features", schema: featuresSchema });
 
         // TODO extract to a separate function and add tests
         const filteredFeatures: Features = Object.entries(features).reduce(
@@ -403,8 +427,31 @@ class Api {
         return this.request({ method: "GET", path: "/hunted-animals", schema: huntedAnimalsSchema });
     }
 
-    public getHunts(): Promise<Hunt[]> {
-        return this.request({ method: "GET", path: "/hunts", schema: huntsSchema });
+    public getUnlimitedHuntedAnimals(): Promise<UnlimitedHuntedAnimal[]> {
+        return this.request({ method: "GET", path: "/unlimited-hunted-animals", schema: unlimitedHuntedAnimalsSchema });
+    }
+
+    public async getHunts(): Promise<{ hunts: Hunt[]; timing: HuntsRequestTiming }> {
+        const headers = await this.getRequestHeaders();
+
+        const startedAt = new Date();
+        const response = await fetch(this.baseUrl + "/hunts", {
+            headers,
+        });
+        const finishedAt = new Date();
+
+        if (!response.ok) {
+            throw new Error(`Unexpected response response status: ${response.status}`);
+        }
+
+        const json = await response.json();
+        const hunts = huntsSchema.parse(json);
+        const timing: HuntsRequestTiming = {
+            startedAt: startedAt.toISOString(),
+            finishedAt: finishedAt.toISOString(),
+            duration: finishedAt.getTime() - startedAt.getTime(),
+        };
+        return { hunts, timing };
     }
 
     public getDrivenHuntByEventGuid(guid: string): Promise<HuntEvent> {
@@ -417,6 +464,32 @@ class Api {
 
     public getNews(): Promise<NewsItem[]> {
         return this.request({ method: "GET", path: "/user/news", schema: newsSchema });
+    }
+
+    public async getSpeciesStatistics(): Promise<StatisticsSpeciesItem[]> {
+        const response = await this.request({
+            method: "GET",
+            path: "/statistics/species",
+            schema: statisticsSpeciesResponseSchema,
+        });
+        return response.statistics;
+    }
+
+    public async getIndividualHuntStatistics(): Promise<IndividualHuntStatisticsItem[]> {
+        const response = await this.request({
+            method: "GET",
+            path: "/statistics/individual-hunts",
+            schema: individualHuntStatisticsResponseSchema,
+        });
+        return response.statistics;
+    }
+
+    public getDrivenHuntStatistics(): Promise<DrivenHuntStatisticsItem[]> {
+        return this.request({
+            method: "GET",
+            path: "/statistics/beat-hunts",
+            schema: drivenHuntStatisticsResponseSchema,
+        }).then((res: { statistics: DrivenHuntStatisticsItem[] }) => res.statistics);
     }
 
     private async postWithErrorHandling(
@@ -493,7 +566,7 @@ class Api {
         let headers: Record<string, string>;
         try {
             headers = await this.getRequestHeaders();
-        } catch (error) {
+        } catch {
             return Promise.resolve({
                 success: false,
                 error: { type: "other" },
@@ -501,10 +574,28 @@ class Api {
             });
         }
 
+        const url = getReportRequestUrl(report, this.baseUrl);
+        if (!url) {
+            return Promise.resolve({
+                success: false,
+                error: { type: "other" },
+                reason: `Unrecognized report feature layer: ${report.edits[0].id}`,
+            });
+        }
+
+        const formData = getReportRequestFormData(report);
+        if (!formData) {
+            return Promise.resolve({
+                success: false,
+                error: { type: "other" },
+                reason: `Unrecognized report feature layer: ${report.edits[0].id}`,
+            });
+        }
+
         return new Promise((resolve) => {
             const xhr = new XMLHttpRequest();
 
-            xhr.open("POST", this.baseUrl + "/applyEdits", true);
+            xhr.open("POST", url, true);
 
             xhr.timeout = configuration.reports.timeout;
 
@@ -513,17 +604,14 @@ class Api {
             }
             xhr.setRequestHeader("Content-Type", "multipart/form-data");
 
-            const formData = new FormData();
-            formData.append("edits", JSON.stringify(report.edits));
-
-            if (report.photo) {
-                // @ts-expect-error RN handles files like this
-                formData.append("files", getPhotoForFormData(report.photo));
-            }
+            let lastProgress = 0;
 
             xhr.upload.onprogress = (event) => {
-                if (event.lengthComputable) {
-                    const progress = Math.round((event.loaded / event.total) * 100);
+                if (event.lengthComputable && event.total > 0) {
+                    const raw = (event.loaded / event.total) * 100;
+                    // Clamp to [0,100] and enforce monotonic increase
+                    const progress = Math.min(100, Math.max(lastProgress, Math.round(raw)));
+                    lastProgress = progress;
                     onProgress(progress);
                 }
             };
@@ -531,7 +619,7 @@ class Api {
             xhr.onload = () => {
                 const result = parsePostReportResponse(
                     xhr.status,
-                    xhr.getResponseHeader("Content-Type")!,
+                    xhr.getResponseHeader("Content-Type") ?? undefined,
                     xhr.responseText,
                     report.edits[0].id
                 );

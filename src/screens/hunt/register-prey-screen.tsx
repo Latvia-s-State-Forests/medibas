@@ -29,8 +29,8 @@ export function RegisterPreyScreen({ route }: RegisterPrayScreenProps) {
     useFocusEffect(
         React.useCallback(() => {
             InteractionManager.runAfterInteractions(() => {
-                queryClient.invalidateQueries(queryKeys.profile);
-                queryClient.invalidateQueries(queryKeys.permits);
+                queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+                queryClient.invalidateQueries({ queryKey: queryKeys.permits });
             });
         }, [])
     );

@@ -1,9 +1,7 @@
 import { configuration } from "~/configuration";
 import { i18n } from "~/i18n";
 import { ObservationTypeId, ObservedSignsId, SpeciesId } from "~/types/classifiers";
-import { AnimalsState, ObservationsState } from "~/types/observations";
-import { DeadAnimalsState } from "~/types/observations";
-import { SignsOfPresenceState } from "~/types/observations";
+import { AnimalsState, DeadAnimalsState, ObservationsState, SignsOfPresenceState } from "~/types/observations";
 
 function getErrorMessage(fieldName: string): string {
     return `"${fieldName}" ${i18n.t("validation.requiredField")}`;

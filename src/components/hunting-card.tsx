@@ -50,7 +50,7 @@ export function HuntingCard({
                     </View>
                     {status ? (
                         <View style={styles.status}>
-                            <HuntingCardStatus status={status} />
+                            <HuntingCardStatusIndicator status={status} />
                         </View>
                     ) : null}
                 </View>
@@ -83,11 +83,11 @@ export function HuntingCard({
     );
 }
 
-type HuntingCardStatusProps = {
+type HuntingCardStatusIndicatorProps = {
     status: HuntingCardStatus;
 };
 
-function HuntingCardStatus({ status }: HuntingCardStatusProps) {
+function HuntingCardStatusIndicator({ status }: HuntingCardStatusIndicatorProps) {
     const { t } = useTranslation();
     const dotColor =
         status === "active" ? { backgroundColor: theme.color.success } : { backgroundColor: theme.color.warning };

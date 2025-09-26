@@ -5,12 +5,13 @@ import { useClassifiers } from "~/hooks/use-classifiers";
 import { DEFAULT_APP_LANGUAGE, getAppLanguage } from "~/i18n";
 import { HuntedTypeId } from "~/types/classifiers";
 import { Hunt } from "~/types/hunts";
+import { DrivenHuntStatisticsItem, IndividualHuntStatisticsItem } from "~/types/statistics";
 import { getFilteredHuntedSpecies } from "~/utils/get-filtered-hunted-species";
 import { getSortedItems } from "~/utils/get-sorted-items";
 import { List } from "./list";
 
 type HuntedSpeciesListProps = {
-    hunt: Hunt;
+    hunt: Hunt | IndividualHuntStatisticsItem | DrivenHuntStatisticsItem;
 };
 
 export function HuntedSpeciesList({ hunt }: HuntedSpeciesListProps) {

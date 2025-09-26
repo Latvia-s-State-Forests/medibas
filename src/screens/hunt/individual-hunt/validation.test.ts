@@ -18,6 +18,7 @@ const submitDrivenHunt: IndividualHuntFormState & { huntPlace: HuntPlace; hasEqu
     plannedToDate: new Date(),
     species: "",
     dogs: [],
+    huntAllSpecies: false,
     hasEquipment: false,
     huntPlace: HuntPlace.InTheStation,
 };
@@ -79,6 +80,26 @@ describe("getSubmitIndividualHuntValidationErrors", () => {
             ...submitDrivenHunt,
             selectedSpeciesWithEquipmentList: [],
             hasEquipment: true,
+        });
+        expect(errors).toEqual(['"Medījamās sugas" ir obligāti aizpildāms lauks']);
+    });
+
+    it("if hunt place is InTheStation and huntAllSpecies is true, no species validation error should be returned", () => {
+        const errors = getSubmitIndividualHuntValidationErrors({
+            ...submitDrivenHunt,
+            huntPlace: HuntPlace.InTheStation,
+            huntAllSpecies: true,
+            selectedSpeciesList: [], // Empty species list but huntAllSpecies is true
+        });
+        expect(errors).toEqual([]);
+    });
+
+    it("if hunt place is OutSideStation and huntAllSpecies is true, species validation error should still be returned", () => {
+        const errors = getSubmitIndividualHuntValidationErrors({
+            ...submitDrivenHunt,
+            huntPlace: HuntPlace.OutSideStation,
+            huntAllSpecies: true,
+            selectedSpeciesList: [], // Empty species list
         });
         expect(errors).toEqual(['"Medījamās sugas" ir obligāti aizpildāms lauks']);
     });

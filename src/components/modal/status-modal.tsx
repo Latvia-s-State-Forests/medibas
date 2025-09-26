@@ -16,15 +16,18 @@ type StatusModalProps = Omit<ModalProps, "children"> & {
     title: string;
     description?: string;
 };
+
 export function StatusModal({ status, title, description, ...modalProps }: StatusModalProps) {
     return (
         <Modal {...modalProps}>
             <View style={styles.center}>
-                {status === "success" && <LargestIcon style={styles.icon} name="success" />}
-                {status === "failure" && <LargestIcon style={styles.icon} name="failure" />}
-                <Text size={22} weight="bold" style={styles.text}>
-                    {title}
-                </Text>
+                <View style={styles.top}>
+                    {status === "success" && <LargestIcon name="success" />}
+                    {status === "failure" && <LargestIcon name="failure" />}
+                    <Text size={22} weight="bold" style={styles.text}>
+                        {title}
+                    </Text>
+                </View>
                 {description ? <Text style={[styles.margin, styles.text]}>{description}</Text> : null}
                 <Spacer size={34} />
             </View>
@@ -37,8 +40,9 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
-    icon: {
-        marginBottom: 38,
+    top: {
+        gap: 38,
+        alignItems: "center",
     },
     text: {
         textAlign: "center",

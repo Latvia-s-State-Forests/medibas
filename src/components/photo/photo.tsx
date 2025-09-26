@@ -24,11 +24,10 @@ type PhotoProps = {
 export function Photo(props: PhotoProps) {
     const { t } = useTranslation();
     const userStorage = useUserStorage();
-    const [state, send, service] = useMachine(
-        () => photoMachine.withContext({ photo: props.value, mode: props.mode ?? "prompt", userStorage }),
-        {
+    const [state, send] = useMachine(
+        photoMachine.provide({
             actions: {
-                onPhotoSelected: (context) => {
+                onPhotoSelected: ({ context }) => {
                     if (context.photo) {
                         props.onChange(context.photo);
                     }
@@ -41,7 +40,7 @@ export function Photo(props: PhotoProps) {
                         props.onPhotoSelectOpen();
                     }
                 },
-                onPhotoSelectClose: (context, event) => {
+                onPhotoSelectClose: ({ event }) => {
                     // Used for when Android activity restarts
                     if (event.type === "xstate.stop") {
                         return;
@@ -52,17 +51,21 @@ export function Photo(props: PhotoProps) {
                     }
                 },
             },
+        }),
+        {
+            input: { photo: props.value, mode: props.mode ?? "prompt", userStorage },
+            inspect: (inspectEvent) => {
+                if (inspectEvent.type === "@xstate.snapshot") {
+                    const snapshot = inspectEvent.actorRef?.getSnapshot();
+                    if (snapshot?.machine?.id === photoMachine.id) {
+                        logger.log(
+                            "📷 " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event.type)
+                        );
+                    }
+                }
+            },
         }
     );
-
-    React.useEffect(() => {
-        const subscription = service.subscribe((state) => {
-            const message = "📷 " + JSON.stringify(state.value) + " " + JSON.stringify(state.event.type);
-            logger.log(message);
-        });
-
-        return () => subscription.unsubscribe();
-    }, [service]);
 
     return (
         <>
@@ -71,35 +74,35 @@ export function Photo(props: PhotoProps) {
             {state.matches("selected") && state.context.photo ? (
                 <PhotoPreview
                     photo={state.context.photo}
-                    onDelete={() => send("DELETE_PHOTO")}
-                    onOpenPreview={() => send("OPEN_PREVIEW")}
+                    onDelete={() => send({ type: "DELETE_PHOTO" })}
+                    onOpenPreview={() => send({ type: "OPEN_PREVIEW" })}
                 />
             ) : (
-                <PhotoSelect onPress={() => send("SELECT_PHOTO")} />
+                <PhotoSelect onPress={() => send({ type: "SELECT_PHOTO" })} />
             )}
 
             {match(state)
                 .with({ value: { empty: "prompting" } }, () => (
                     <Dialog
                         visible
-                        onBackButtonPress={() => send("PROMPT_CANCELLED")}
+                        onBackButtonPress={() => send({ type: "PROMPT_CANCELLED" })}
                         buttons={
                             <>
                                 <Button
                                     title={t("photo.prompt.chooseFromPhotos")}
                                     icon="browse"
-                                    onPress={() => send("CHOOSE_PHOTO")}
+                                    onPress={() => send({ type: "CHOOSE_PHOTO" })}
                                 />
                                 <Button
                                     title={t("photo.prompt.capture")}
                                     icon="camera"
-                                    onPress={() => send("CAPTURE_PHOTO")}
+                                    onPress={() => send({ type: "CAPTURE_PHOTO" })}
                                 />
                                 <Button
                                     title={t("modal.cancel")}
                                     icon="close"
                                     variant="secondary-outlined"
-                                    onPress={() => send("PROMPT_CANCELLED")}
+                                    onPress={() => send({ type: "PROMPT_CANCELLED" })}
                                 />
                             </>
                         }
@@ -111,17 +114,17 @@ export function Photo(props: PhotoProps) {
                         icon="failure"
                         title={t("photo.failure.title")}
                         description={t("photo.failure.message")}
-                        onBackButtonPress={() => send("ERROR_CLOSE")}
+                        onBackButtonPress={() => send({ type: "ERROR_CLOSE" })}
                         buttons={
                             <>
                                 <Button
                                     title={t("photo.failure.openSettings")}
-                                    onPress={() => send("ERROR_OPEN_SETTINGS")}
+                                    onPress={() => send({ type: "ERROR_OPEN_SETTINGS" })}
                                 />
                                 <Button
                                     variant="secondary-outlined"
                                     title={t("photo.failure.cancel")}
-                                    onPress={() => send("ERROR_CLOSE")}
+                                    onPress={() => send({ type: "ERROR_CLOSE" })}
                                 />
                             </>
                         }
@@ -132,21 +135,24 @@ export function Photo(props: PhotoProps) {
                         visible
                         icon="delete"
                         title={t("photo.remove.title")}
-                        onBackButtonPress={() => send("DELETE_REJECTED")}
+                        onBackButtonPress={() => send({ type: "DELETE_REJECTED" })}
                         buttons={
                             <>
-                                <Button title={t("general.delete")} onPress={() => send("DELETE_CONFIRMED")} />
+                                <Button
+                                    title={t("general.delete")}
+                                    onPress={() => send({ type: "DELETE_CONFIRMED" })}
+                                />
                                 <Button
                                     variant="secondary-outlined"
                                     title={t("modal.cancel")}
-                                    onPress={() => send("DELETE_REJECTED")}
+                                    onPress={() => send({ type: "DELETE_REJECTED" })}
                                 />
                             </>
                         }
                     />
                 ))
                 .with({ value: { selected: "previewing" } }, () => (
-                    <PhotoPreviewModal photo={state.context.photo!} onClose={() => send("CLOSE_PREVIEW")} />
+                    <PhotoPreviewModal photo={state.context.photo!} onClose={() => send({ type: "CLOSE_PREVIEW" })} />
                 ))
                 .otherwise(() => null)}
         </>

@@ -28,9 +28,12 @@ import { formatLabel } from "~/utils/format-label";
 import { formatPosition } from "~/utils/format-position";
 import { getSubmitInfrastructureValidationErrors } from "./validation";
 
-type DistrictInfrastructureFormScreen = NativeStackScreenProps<RootNavigatorParams, "DistrictInfrastructureFormScreen">;
+type DistrictInfrastructureFormScreenProps = NativeStackScreenProps<
+    RootNavigatorParams,
+    "DistrictInfrastructureFormScreen"
+>;
 
-export function DistrictInfrastructureFormScreen({ route, navigation }: DistrictInfrastructureFormScreen) {
+export function DistrictInfrastructureFormScreen({ route, navigation }: DistrictInfrastructureFormScreenProps) {
     const { infrastructureToEdit, currentDistrictId } = route.params ?? {};
     const { t } = useTranslation();
     const profile = useProfile();
@@ -131,7 +134,7 @@ export function DistrictInfrastructureFormScreen({ route, navigation }: District
                             positionType="infrastructure"
                             onMark={onSelectPosition}
                             position={selectedPosition}
-                            activeDistrictId={district}
+                            activeDistrictIds={[district]}
                         />
                     </View>
                     {selectedPosition[0] !== 0 || selectedPosition[1] !== 0 ? (
@@ -147,7 +150,6 @@ export function DistrictInfrastructureFormScreen({ route, navigation }: District
                         </>
                     ) : null}
                     <Spacer size={16} />
-                    {/* TODO: Focus on selected typeid when open form for editing */}
                     <ScrollableSelectionFields
                         label={t("mtl.infrastructure.type")}
                         options={huntingInfrastructure.map((classifier) => ({

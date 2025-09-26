@@ -78,7 +78,7 @@ export function DateInput({ label, value, minimumDate, maximumDate, onChange, di
                                 {label}
                             </Text>
                             <Text numberOfLines={1} style={styles.bigText} color="gray7">
-                                {format(value, "P")}
+                                {format(value, "dd.MM.yyyy")}
                             </Text>
                         </View>
                     ) : (

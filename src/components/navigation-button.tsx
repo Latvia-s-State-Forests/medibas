@@ -68,29 +68,25 @@ export function NavigationButton(props: NavigationButtonProps) {
                 <Spacer horizontal size={16} />
                 <MediumIcon name="marker" color={pressedStyle} />
             </Pressable>
-            <Modal
-                visible={availableAppsDialogVisible}
-                onBackButtonPress={() => setAvailableAppsDialogVisible(false)}
-                children={
-                    <View>
-                        <Text style={styles.title} size={18} weight="bold">
-                            {t("navigation.chooseApp")}
-                        </Text>
-                        <View style={styles.appButtonsContainer}>
-                            {availableApps.map((app, index) => (
-                                <View key={`${index}-${app.name}`}>
-                                    <Button title={app.name} onPress={() => onAppSelectPress(app.name)} />
-                                </View>
-                            ))}
-                            <Button
-                                variant="secondary-outlined"
-                                title={t("navigation.cancel")}
-                                onPress={() => setAvailableAppsDialogVisible(false)}
-                            />
-                        </View>
+            <Modal visible={availableAppsDialogVisible} onBackButtonPress={() => setAvailableAppsDialogVisible(false)}>
+                <View>
+                    <Text style={styles.title} size={18} weight="bold">
+                        {t("navigation.chooseApp")}
+                    </Text>
+                    <View style={styles.appButtonsContainer}>
+                        {availableApps.map((app, index) => (
+                            <View key={`${index}-${app.name}`}>
+                                <Button title={app.name} onPress={() => onAppSelectPress(app.name)} />
+                            </View>
+                        ))}
+                        <Button
+                            variant="secondary-outlined"
+                            title={t("navigation.cancel")}
+                            onPress={() => setAvailableAppsDialogVisible(false)}
+                        />
                     </View>
-                }
-            />
+                </View>
+            </Modal>
             <Dialog
                 visible={failureDialogVisible}
                 icon="failure"

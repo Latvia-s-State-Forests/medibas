@@ -33,7 +33,7 @@ export function DrivenHuntListScreen() {
     useFocusEffect(
         React.useCallback(() => {
             InteractionManager.runAfterInteractions(() => {
-                queryClient.invalidateQueries(queryKeys.hunts);
+                queryClient.invalidateQueries({ queryKey: queryKeys.hunts });
             });
         }, [])
     );

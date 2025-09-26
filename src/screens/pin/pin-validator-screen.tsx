@@ -16,16 +16,18 @@ import { theme } from "~/theme";
 export function PinValidatorScreen() {
     const { t } = useTranslation();
 
-    const [state, send] = useMachine(() => pinValidatorMachine, {
-        actions: {
-            onSuccess: () => {
-                AuthAction.pinValid();
+    const [state, send] = useMachine(
+        pinValidatorMachine.provide({
+            actions: {
+                onSuccess: () => {
+                    AuthAction.pinValid();
+                },
+                onFailure: () => {
+                    AuthAction.pinInvalid();
+                },
             },
-            onFailure: () => {
-                AuthAction.pinInvalid();
-            },
-        },
-    });
+        })
+    );
     const { remainingAttempts, configuredPin, pin } = state.context;
 
     function onEnterDigit(digit: number) {

@@ -8,15 +8,20 @@ import { Permit } from "~/types/permits";
 export function usePermitsQuery(enabled: boolean) {
     const userStorage = useUserStorage();
 
-    return useQuery<Permit[]>(queryKeys.permits, () => api.getPermits(), {
-        initialData: userStorage.getPermits(),
-        onSuccess: (permits) => {
-            logger.log("Permits loaded");
-            userStorage.setPermits(permits);
+    return useQuery<Permit[]>({
+        queryKey: queryKeys.permits,
+        queryFn: async () => {
+            try {
+                const permits = await api.getPermits();
+                logger.log("Permits loaded");
+                userStorage.setPermits(permits);
+                return permits;
+            } catch (error) {
+                logger.error("Failed to load permits", error);
+                throw error;
+            }
         },
-        onError: (error) => {
-            logger.error("Failed to load permits", error);
-        },
+        initialData: () => userStorage.getPermits(),
         enabled,
     });
 }

@@ -156,7 +156,7 @@ type ReportListItemProps = {
     inAfricanSwineFeverZone?: boolean;
 };
 
-function ReportListItem(props: ReportListItemProps) {
+export function ReportListItem(props: ReportListItemProps) {
     const { t } = useTranslation();
     const classifiers = useClassifiers();
     const language = getAppLanguage();

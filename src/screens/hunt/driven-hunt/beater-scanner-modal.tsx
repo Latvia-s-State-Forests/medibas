@@ -1,6 +1,7 @@
 import { Buffer } from "buffer";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
+import { match } from "ts-pattern";
 import { Button } from "~/components/button";
 import { QRScannerModal } from "~/components/qr-code/qr-scanner-modal";
 import { logger } from "~/logger";
@@ -26,7 +27,7 @@ export function BeaterScannerModal(props: BeaterScannerModalProps) {
 
     function onScanned(data: string) {
         const encodedData = Buffer.from(data, "base64").toString("utf-8");
-        if (confirmation || parseFailure || mismatchFailure) {
+        if (confirmation || parseFailure || duplicateFailure || mismatchFailure) {
             return;
         }
         try {
@@ -65,79 +66,93 @@ export function BeaterScannerModal(props: BeaterScannerModalProps) {
         }
     }
 
+    const showMessageModal = React.useMemo(
+        () => confirmation || parseFailure || duplicateFailure || mismatchFailure,
+        [confirmation, parseFailure, duplicateFailure, mismatchFailure]
+    );
+
     return (
         <QRScannerModal visible={props.visible} onScanned={onScanned} onClose={props.onReject}>
-            <MessageModal
-                visible={confirmation}
-                icon="hunt"
-                title={t("hunt.drivenHunt.beaterManagement.scanner.confirmation.title", {
-                    beater: profile ? [profile.fn, profile.ln].join(" ") : "??",
-                })}
-                onBackButtonPress={() => {
-                    setConfirmation(false);
-                }}
-                buttons={
-                    <>
-                        <Button
-                            title={t("hunt.drivenHunt.beaterManagement.scanner.confirmation.confirm")}
-                            onPress={onConfirm}
-                        />
-                        <Button
-                            title={t("hunt.drivenHunt.beaterManagement.scanner.confirmation.reject")}
-                            onPress={() => {
-                                setConfirmation(false);
-                            }}
-                            variant="secondary-outlined"
-                        />
-                    </>
-                }
-            />
-            <MessageModal
-                visible={parseFailure}
-                icon="failure"
-                title={t("hunt.drivenHunt.beaterManagement.scanner.parseFailure.title")}
-                description={t("hunt.drivenHunt.beaterManagement.scanner.parseFailure.description")}
-                buttons={
-                    <Button
-                        title={t("hunt.drivenHunt.beaterManagement.scanner.parseFailure.button")}
-                        onPress={() => {
-                            setParseFailure(false);
-                        }}
+            {match({ confirmation, parseFailure, duplicateFailure, mismatchFailure })
+                .with({ parseFailure: true }, () => (
+                    <MessageModal
+                        visible={showMessageModal}
+                        icon="failure"
+                        title={t("hunt.drivenHunt.beaterManagement.scanner.parseFailure.title")}
+                        description={t("hunt.drivenHunt.beaterManagement.scanner.parseFailure.description")}
+                        buttons={
+                            <Button
+                                title={t("hunt.drivenHunt.beaterManagement.scanner.parseFailure.button")}
+                                onPress={() => {
+                                    setParseFailure(false);
+                                }}
+                            />
+                        }
                     />
-                }
-            />
-            <MessageModal
-                visible={duplicateFailure}
-                icon="failure"
-                title={t("hunt.drivenHunt.beaterManagement.scanner.duplicateFailure.title")}
-                description={t("hunt.drivenHunt.beaterManagement.scanner.duplicateFailure.description", {
-                    beater: profile ? [profile.fn, profile.ln].join(" ") : "??",
-                })}
-                buttons={
-                    <Button
-                        title={t("hunt.drivenHunt.beaterManagement.scanner.duplicateFailure.button")}
-                        onPress={() => {
-                            setDuplicateFailure(false);
-                        }}
+                ))
+                .with({ duplicateFailure: true }, () => (
+                    <MessageModal
+                        visible={showMessageModal}
+                        icon="failure"
+                        title={t("hunt.drivenHunt.beaterManagement.scanner.duplicateFailure.title")}
+                        description={t("hunt.drivenHunt.beaterManagement.scanner.duplicateFailure.description", {
+                            beater: profile ? [profile.fn, profile.ln].join(" ") : "??",
+                        })}
+                        buttons={
+                            <Button
+                                title={t("hunt.drivenHunt.beaterManagement.scanner.duplicateFailure.button")}
+                                onPress={() => {
+                                    setDuplicateFailure(false);
+                                }}
+                            />
+                        }
                     />
-                }
-            />
-            <MessageModal
-                visible={mismatchFailure}
-                icon="failure"
-                title={t("hunt.drivenHunt.beaterManagement.scanner.mismatchFailure.title")}
-                description={t("hunt.drivenHunt.beaterManagement.scanner.mismatchFailure.description", {
-                    beater: profile ? [profile.fn, profile.ln].join(" ") : "??",
-                })}
-                buttons={
-                    <Button
-                        title={t("hunt.drivenHunt.beaterManagement.scanner.mismatchFailure.button")}
-                        onPress={() => {
-                            setMismatchFailure(false);
-                        }}
+                ))
+                .with({ mismatchFailure: true }, () => (
+                    <MessageModal
+                        visible={showMessageModal}
+                        icon="failure"
+                        title={t("hunt.drivenHunt.beaterManagement.scanner.mismatchFailure.title")}
+                        description={t("hunt.drivenHunt.beaterManagement.scanner.mismatchFailure.description", {
+                            beater: profile ? [profile.fn, profile.ln].join(" ") : "??",
+                        })}
+                        buttons={
+                            <Button
+                                title={t("hunt.drivenHunt.beaterManagement.scanner.mismatchFailure.button")}
+                                onPress={() => {
+                                    setMismatchFailure(false);
+                                }}
+                            />
+                        }
                     />
-                }
-            />
+                ))
+                .otherwise(() => (
+                    <MessageModal
+                        visible={showMessageModal}
+                        icon="hunt"
+                        title={t("hunt.drivenHunt.beaterManagement.scanner.confirmation.title", {
+                            beater: profile ? [profile.fn, profile.ln].join(" ") : "??",
+                        })}
+                        onBackButtonPress={() => {
+                            setConfirmation(false);
+                        }}
+                        buttons={
+                            <>
+                                <Button
+                                    title={t("hunt.drivenHunt.beaterManagement.scanner.confirmation.confirm")}
+                                    onPress={onConfirm}
+                                />
+                                <Button
+                                    title={t("hunt.drivenHunt.beaterManagement.scanner.confirmation.reject")}
+                                    onPress={() => {
+                                        setConfirmation(false);
+                                    }}
+                                    variant="secondary-outlined"
+                                />
+                            </>
+                        }
+                    />
+                ))}
         </QRScannerModal>
     );
 }

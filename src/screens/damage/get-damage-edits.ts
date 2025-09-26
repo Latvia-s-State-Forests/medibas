@@ -17,6 +17,7 @@ import {
     Geometry,
     InfrastructureDamageAttributes,
 } from "~/types/report";
+import { parseNumber } from "~/utils/parse-number";
 
 export function getDamageEdits(damage: DamageState, classifiers: Classifiers): [Edit] {
     if (damage.type === DamageTypeId.AgriculturalLand) {
@@ -38,7 +39,8 @@ function getAgriculturalLandDamageEdits(damage: DamageState, classifiers: Classi
     const agriculturalLandTypeId =
         damage.land.type === AgriculturalLandTypeId.Other ? damage.land.subtype : damage.land.type;
 
-    const speciesId = damage.land.subtype === AgriculturalLandTypeId.Other ? SpeciesId.Other : damage.land.species ?? 0;
+    const speciesId =
+        damage.land.subtype === AgriculturalLandTypeId.Other ? SpeciesId.Other : (damage.land.species ?? 0);
 
     const otherSpecies =
         damage.land.type === AgriculturalLandTypeId.Other && damage.land.subtype === AgriculturalLandTypeId.Other
@@ -63,7 +65,7 @@ function getAgriculturalLandDamageEdits(damage: DamageState, classifiers: Classi
     if (agriculturalLandTypeClassifier?.isCountable) {
         feature.attributes.count = damage.land.count;
     } else {
-        feature.attributes.damagedArea = Number(damage.land.area);
+        feature.attributes.damagedArea = parseNumber(damage.land.area);
     }
 
     return [
@@ -100,7 +102,7 @@ function getForestDamageEdits(damage: DamageState): [Edit] {
         geometry: getDamageGeometry(damage),
         attributes: {
             notes: damage.notes,
-            damagedArea: Number(damage.forest.area),
+            damagedArea: parseNumber(damage.forest.area),
             forestProtectionDone: damage.forest.standProtection === "yes", // TODO: rename standProtection to forestProtection and change type to boolean
             damagedTreeSpeciesIds,
             damageVolumeTypeId: damage.forest.damageVolumeType ?? 0,

@@ -3,8 +3,9 @@ import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { ReadOnlyField } from "~/components/read-only-field";
 import { useClassifiers } from "~/hooks/use-classifiers";
-import { DEFAULT_APP_LANGUAGE, getAppLanguage } from "~/i18n";
+import { getAppLanguage } from "~/i18n";
 import { Hunt } from "~/types/hunts";
+import { formatTargetSpecies } from "~/utils/format-target-species";
 import { List } from "./list";
 
 type TargetSpeciesListProps = {
@@ -14,43 +15,11 @@ type TargetSpeciesListProps = {
 export function TargetSpeciesList({ hunt }: TargetSpeciesListProps) {
     const { t } = useTranslation();
     const classifiers = useClassifiers();
+    const appLanguage = getAppLanguage();
 
     const targetSpecies = React.useMemo(() => {
-        const language = getAppLanguage();
-
-        const speciesById = new Map<number, string>();
-        for (const species of classifiers.animalSpecies.options) {
-            speciesById.set(
-                species.id,
-                species.description[language] ?? species.description[DEFAULT_APP_LANGUAGE] ?? "??"
-            );
-        }
-
-        const permitTypesById = new Map<number, string>();
-        for (const permitType of classifiers.permitTypes.options) {
-            permitTypesById.set(
-                permitType.id,
-                permitType.description[language] ?? permitType.description[DEFAULT_APP_LANGUAGE] ?? "??"
-            );
-        }
-
-        const result: string[] = [];
-        for (const targetSpecies of hunt.targetSpecies) {
-            if (targetSpecies.permitTypeId) {
-                const permitType = permitTypesById.get(targetSpecies.permitTypeId);
-                if (permitType) {
-                    result.push(permitType);
-                }
-            } else {
-                const species = speciesById.get(targetSpecies.speciesId);
-                if (species) {
-                    result.push(species);
-                }
-            }
-        }
-        result.sort((a, b) => a.localeCompare(b));
-        return result;
-    }, [hunt.targetSpecies, classifiers]);
+        return formatTargetSpecies(hunt.targetSpecies, classifiers, appLanguage);
+    }, [hunt.targetSpecies, classifiers, appLanguage]);
 
     if (!hunt.hasTargetSpecies) {
         return (

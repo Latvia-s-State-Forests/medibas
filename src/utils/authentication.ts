@@ -1,4 +1,4 @@
-import jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 import { AuthenticationService, PendingSession } from "../types/authentication";
 
 export function getTokenExpirationDate(token: string): string {

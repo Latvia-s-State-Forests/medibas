@@ -1,8 +1,8 @@
 import { ExpoConfig } from "expo/config";
 
-const VERSION = "3.2.1";
-const IOS_BUILD_NUMBER = "1";
-const ANDROID_VERSION_CODE = 1519;
+const VERSION = "3.3.0";
+const IOS_BUILD_NUMBER = "7";
+const ANDROID_VERSION_CODE = 1527;
 
 export default (): ExpoConfig => {
     const config: ExpoConfig = {
@@ -56,6 +56,13 @@ export default (): ExpoConfig => {
             },
             softwareKeyboardLayoutMode: "pan",
             googleServicesFile: "./google-services-dev.json",
+            edgeToEdgeEnabled: true,
+            blockedPermissions: [
+                "android.permission.READ_MEDIA_IMAGES",
+                "android.permission.READ_MEDIA_VIDEO",
+                "android.permission.READ_MEDIA_AUDIO",
+                "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+            ],
         },
         scheme: ["app.mednis.dev", "app.mednis.test", "app.mednis.beta", "lv.mezaipasnieki.mednis"],
         extra: {
@@ -99,6 +106,13 @@ export default (): ExpoConfig => {
                 },
             ],
             [
+                "expo-media-library",
+                {
+                    savePhotosPermission:
+                        "Allow access to save captured photos. You can always change this later in Settings app.",
+                },
+            ],
+            [
                 "expo-build-properties",
                 {
                     android: {
@@ -120,7 +134,7 @@ export default (): ExpoConfig => {
         ],
     };
 
-    if (process.env.APP_VARIANT === "test") {
+    if (process.env.EXPO_PUBLIC_APP_VARIANT === "test") {
         config.name = "Mednis Test";
         config.slug = "mednis-test";
         config.icon = "./assets/icon-ios-test.png";
@@ -131,7 +145,7 @@ export default (): ExpoConfig => {
         config.android!.googleServicesFile = "./google-services-test.json";
         config.scheme = "app.mednis.test";
         config.extra!.eas!.projectId = "";
-    } else if (process.env.APP_VARIANT === "beta") {
+    } else if (process.env.EXPO_PUBLIC_APP_VARIANT === "beta") {
         config.name = "Mednis Beta";
         config.slug = "mednis-beta";
         config.icon = "./assets/icon-ios-beta.png";
@@ -142,7 +156,7 @@ export default (): ExpoConfig => {
         config.android!.googleServicesFile = "./google-services-beta.json";
         config.scheme = ["app.mednis.beta", "lv.mezaipasnieki.mednis"];
         config.extra!.eas!.projectId = "";
-    } else if (process.env.APP_VARIANT === "production") {
+    } else if (process.env.EXPO_PUBLIC_APP_VARIANT === "production") {
         config.name = "Mednis";
         config.slug = "mednis";
         config.icon = "./assets/icon-ios.png";

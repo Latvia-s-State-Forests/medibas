@@ -29,7 +29,7 @@ export function HuntScreen() {
     useFocusEffect(
         React.useCallback(() => {
             InteractionManager.runAfterInteractions(() => {
-                queryClient.invalidateQueries(queryKeys.hunts);
+                queryClient.invalidateQueries({ queryKey: queryKeys.hunts });
             });
         }, [])
     );

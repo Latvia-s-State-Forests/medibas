@@ -1,4 +1,4 @@
-import { useActor } from "@xstate/react";
+import { useSelector } from "@xstate/react";
 import * as React from "react";
 import { StyleSheet, View } from "react-native";
 import { Map, MapHandle } from "~/components/map/map";
@@ -8,7 +8,7 @@ import { useAllDistrictDamages } from "~/hooks/use-district-damages";
 import { useDistricts } from "~/hooks/use-districts";
 import { useFeatures } from "~/hooks/use-features";
 import { useSelectedDistrictId } from "~/hooks/use-selected-district-id";
-import { mapService } from "~/machines/map-machine";
+import { mapActor } from "~/machines/map-machine";
 import { theme } from "~/theme";
 import { MapService } from "~/types/map";
 import { PositionResult } from "~/types/position-result";
@@ -20,7 +20,7 @@ type CurrentPositionIdleProps = {
 
 export function CurrentPositionIdle({ onRetry, position }: CurrentPositionIdleProps) {
     const mapRef = React.useRef<MapHandle>(null);
-    const [layerState] = useActor(mapService);
+    const layerContext = useSelector(mapActor, (state) => state.context);
     const features = useFeatures();
     const districts = useDistricts();
     const [selectedDistrictId] = useSelectedDistrictId();
@@ -38,7 +38,7 @@ export function CurrentPositionIdle({ onRetry, position }: CurrentPositionIdlePr
         mapRef.current?.sendAction({
             type: "setDistricts",
             districts,
-            activeDistrictId: selectedDistrictId,
+            activeDistrictIds: selectedDistrictId ? [selectedDistrictId] : undefined,
         });
     }, [mapLoaded, districts, selectedDistrictId]);
 
@@ -48,9 +48,9 @@ export function CurrentPositionIdle({ onRetry, position }: CurrentPositionIdlePr
         }
         mapRef.current?.sendAction({
             type: "toggleLayer",
-            activeLayers: layerState.context.activeLayerIds,
+            activeLayers: layerContext.activeLayerIds,
         });
-    }, [layerState.context.activeLayerIds, mapLoaded]);
+    }, [layerContext.activeLayerIds, mapLoaded]);
 
     React.useEffect(() => {
         if (!mapLoaded) {
@@ -80,7 +80,7 @@ export function CurrentPositionIdle({ onRetry, position }: CurrentPositionIdlePr
                 return service;
             }
         });
-        const { activeLayerIds } = layerState.context;
+        const { activeLayerIds } = layerContext;
 
         mapRef.current?.sendAction({
             type: "initialize",

@@ -1,13 +1,16 @@
 import * as React from "react";
-import { Pressable, View, StyleProp, StyleSheet, TextInput, TextInputProps, ViewStyle, Platform } from "react-native";
+import { StyleSheet, TextInput, TextInputProps, View } from "react-native";
 import { Text } from "~/components/text";
 import { theme } from "~/theme";
 
-type InputProps = TextInputProps & {
+type InputProps = {
     label: string;
-    secondaryLabel?: string;
-    style?: StyleProp<ViewStyle>;
-    isMultiline?: boolean;
+    value: string;
+    onChangeText: (text: string) => void;
+    editable?: boolean;
+    keyboardType?: TextInputProps["keyboardType"];
+    maxLength?: number;
+    ref?: React.Ref<TextInput>;
 };
 
 export function Input({
@@ -15,29 +18,12 @@ export function Input({
     value,
     onChangeText,
     editable = true,
-    isMultiline = false,
-    style,
     keyboardType = "default",
-    ...props
+    maxLength,
+    ref,
 }: InputProps) {
     const [isFocused, setIsFocused] = React.useState(false);
-    const inputRef = React.useRef<TextInput>(null);
-    const active = isFocused || value;
-    const labelSize = active ? 12 : 18;
-    const labelTextColor = active ? "gray7" : "gray5";
-    const labelTextWeight = active ? "bold" : "regular";
-    const opacity = { opacity: editable ? 1 : 0.5 };
-    const borderColor = { borderColor: isFocused ? theme.color.greenActive : theme.color.gray2 };
-    const isInputActive = active ? styles.textInput : styles.textInputNotActive;
-    const labelLineHeight = !active ? { lineHeight: 23 } : { lineHeight: 16 };
-    const inputHeight = isMultiline ? { lineHeight: 24, paddingTop: 0 } : { paddingTop: Platform.OS === "ios" ? 3 : 0 };
-
-    function onContainerPress() {
-        if (!editable) {
-            return;
-        }
-        inputRef.current?.focus();
-    }
+    const showSmallLabel = value || isFocused;
 
     function onFocus() {
         setIsFocused(true);
@@ -48,43 +34,29 @@ export function Input({
     }
 
     return (
-        <Pressable
-            style={[
-                styles.container,
-                borderColor,
-                opacity,
-                active ? styles.containerWithValue : styles.containerWithoutValue,
-                style,
-            ]}
-            onPress={onContainerPress}
+        <View
+            style={[styles.container, isFocused ? styles.focused : undefined, !editable ? styles.disabled : undefined]}
         >
-            <View style={styles.textContainer}>
-                <Text
-                    numberOfLines={1}
-                    size={labelSize}
-                    color={labelTextColor}
-                    weight={labelTextWeight}
-                    style={labelLineHeight}
-                >
+            <View style={showSmallLabel ? styles.smallLabelContainer : styles.largeLabelContainer}>
+                <Text style={showSmallLabel ? styles.smallLabel : styles.largeLabel} numberOfLines={1}>
                     {label}
                 </Text>
-
-                <TextInput
-                    {...props}
-                    scrollEnabled={false}
-                    numberOfLines={isMultiline ? 0 : 1}
-                    multiline={isMultiline}
-                    ref={inputRef}
-                    value={value}
-                    onChangeText={onChangeText}
-                    editable={true}
-                    style={[isInputActive, inputHeight]}
-                    onFocus={onFocus}
-                    onBlur={onBlur}
-                    keyboardType={keyboardType}
-                />
             </View>
-        </Pressable>
+
+            <TextInput
+                ref={ref}
+                scrollEnabled={false}
+                numberOfLines={1}
+                value={value}
+                onChangeText={onChangeText}
+                editable={editable}
+                style={styles.textInput}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                keyboardType={keyboardType}
+                maxLength={maxLength}
+            />
+        </View>
     );
 }
 
@@ -92,29 +64,54 @@ const styles = StyleSheet.create({
     container: {
         position: "relative",
         backgroundColor: theme.color.white,
-        flexDirection: "row",
-        paddingHorizontal: 16,
         borderWidth: 1,
+        borderColor: theme.color.gray2,
         borderRadius: 8,
         minHeight: 56,
     },
-    containerWithValue: {
-        paddingVertical: 7,
+    focused: {
+        borderColor: theme.color.greenActive,
     },
-    containerWithoutValue: {
-        paddingTop: 15,
-        paddingBottom: 15.6,
+    disabled: {
+        opacity: 0.5,
     },
-    textContainer: {
-        flex: 1,
+    smallLabelContainer: {
+        position: "absolute",
+        top: 0,
+        right: 0,
+        left: 0,
+    },
+    smallLabel: {
+        fontSize: theme.fontSize[12],
+        lineHeight: 16,
+        fontFamily: theme.fontFamily.bold,
+        color: theme.color.gray7,
+        paddingHorizontal: 16,
+        paddingTop: 8,
+    },
+    largeLabelContainer: {
+        position: "absolute",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        justifyContent: "center",
+    },
+    largeLabel: {
+        fontSize: theme.fontSize[18],
+        lineHeight: 24,
+        color: theme.color.gray5,
+        paddingHorizontal: 16,
     },
     textInput: {
-        fontSize: 16,
+        flex: 1,
+        paddingHorizontal: 16,
+        paddingTop: 24,
+        paddingBottom: 8,
+        lineHeight: 24,
+        fontSize: theme.fontSize[16],
         color: theme.color.gray8,
-        position: "relative",
-    },
-    textInputNotActive: {
-        position: "absolute",
-        top: -20,
+        verticalAlign: "bottom",
+        textAlignVertical: "bottom",
     },
 });

@@ -1,8 +1,9 @@
 import { useNavigation } from "@react-navigation/native";
-import { useInterpret } from "@xstate/react";
+import { useActorRef } from "@xstate/react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { Dimensions, ScrollView, StyleSheet, View } from "react-native";
+import { Dimensions, Platform, StyleSheet, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "~/components/button";
 import { Collapsible } from "~/components/collapsible/collapsible";
@@ -16,6 +17,7 @@ import { ReadOnlyField } from "~/components/read-only-field";
 import { Spacer } from "~/components/spacer";
 import { VmdConnectStatusDialog } from "~/components/vmd-connect-status-dialog";
 import { useProfile } from "~/hooks/use-profile";
+import { logger } from "~/logger";
 import { AuthAction, useUserStorage } from "~/machines/authentication-machine";
 import { vmdConnectMachine } from "~/machines/vmd-machine";
 import { theme } from "~/theme";
@@ -34,8 +36,16 @@ export function ProfileScreen() {
     const [showConfirmLogout, setShowConfirmLogout] = React.useState(false);
     const hasVMD = profile.vmdId !== "" && profile.vmdId !== undefined;
     const { t } = useTranslation();
-    const vmdConnectService = useInterpret(() => vmdConnectMachine);
-
+    const vmdConnectActor = useActorRef(vmdConnectMachine, {
+        inspect: (inspectEvent) => {
+            if (inspectEvent.type === "@xstate.snapshot") {
+                const snapshot = inspectEvent.actorRef?.getSnapshot();
+                if (snapshot?.machine?.id === vmdConnectMachine.id) {
+                    logger.log("🌲 " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event.type));
+                }
+            }
+        },
+    });
     const profileName = userStorage.getProfileName();
     const firstName = profile.firstName ?? profileName?.firstName ?? "";
     const lastName = profile.lastName ?? profileName?.lastName ?? "";
@@ -75,7 +85,8 @@ export function ProfileScreen() {
                 title={t("profile.title")}
                 onEditButtonPress={() => navigation.navigate("EditProfileScreen")}
             />
-            <ScrollView
+            <KeyboardAwareScrollView
+                bottomOffset={Platform.select({ ios: 24, android: 48 })}
                 contentContainerStyle={[
                     styles.body,
                     {
@@ -152,7 +163,7 @@ export function ProfileScreen() {
                             <Button
                                 variant="link"
                                 title={t("profile.connectVmdAccount")}
-                                onPress={() => vmdConnectService.send("CONNECT")}
+                                onPress={() => vmdConnectActor.send({ type: "CONNECT" })}
                                 style={styles.vmdConnectButton}
                             />
                         </Collapsible>
@@ -163,13 +174,13 @@ export function ProfileScreen() {
                         <Button
                             variant="link"
                             title={t("profile.connectVmdAccount")}
-                            onPress={() => vmdConnectService.send("CONNECT")}
+                            onPress={() => vmdConnectActor.send({ type: "CONNECT" })}
                             style={styles.vmdConnectButton}
                         />
                     </>
                 )}
                 <Spacer size={24} />
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             <LogoutButton onPress={() => setShowConfirmLogout(true)} title={t("menu.exit.button")} />
 
@@ -190,7 +201,7 @@ export function ProfileScreen() {
                 onBackButtonPress={() => setShowConfirmLogout(false)}
             />
 
-            <VmdConnectStatusDialog service={vmdConnectService} />
+            <VmdConnectStatusDialog actor={vmdConnectActor} />
         </View>
     );
 }

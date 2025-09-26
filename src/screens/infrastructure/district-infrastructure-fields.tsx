@@ -12,14 +12,13 @@ import { formatPosition } from "~/utils/format-position";
 import { getDistrictDescription } from "~/utils/get-district-description";
 import { isEditedInfrastructureNewer } from "~/utils/is-edited-infrastructure-newer";
 
-const DEFAULT_DESCRIPTION = "-";
-
 type DistrictInfrastructureFieldsProps = {
     infrastructure: Infrastructure;
 };
 
 export function DistrictInfrastructureFields(props: DistrictInfrastructureFieldsProps) {
     const { t } = useTranslation();
+    const UNKNOWN_TYPE = t("features.unknownType");
     const language = getAppLanguage();
     const classifiers = useClassifiers();
     const profile = useProfile();
@@ -29,7 +28,7 @@ export function DistrictInfrastructureFields(props: DistrictInfrastructureFields
             classifiers.huntingInfrastructureTypes.options,
             language,
             props.infrastructure.typeId
-        ) ?? DEFAULT_DESCRIPTION;
+        ) ?? UNKNOWN_TYPE;
 
     const districtTitle = getDistrictDescription(profile, props.infrastructure.huntingDistrictId);
 

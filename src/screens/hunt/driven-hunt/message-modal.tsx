@@ -16,22 +16,18 @@ type MessageModalProps = {
 
 export function MessageModal(props: MessageModalProps) {
     return (
-        <Modal
-            visible={props.visible}
-            onBackButtonPress={props.onBackButtonPress}
-            children={
-                <View>
-                    <View style={styles.messageContainer}>
-                        {props.icon === "loading" ? <Spinner /> : <LargestIcon name={props.icon} />}
-                        <Text size={18} weight="bold" style={styles.title}>
-                            {props.title}
-                        </Text>
-                        {props.description ? <Text style={styles.description}>{props.description}</Text> : null}
-                    </View>
-                    <View style={styles.buttonsContainer}>{props.buttons}</View>
+        <Modal visible={props.visible} onBackButtonPress={props.onBackButtonPress}>
+            <View>
+                <View style={styles.messageContainer}>
+                    {props.icon === "loading" ? <Spinner /> : <LargestIcon name={props.icon} />}
+                    <Text size={18} weight="bold" style={styles.title}>
+                        {props.title}
+                    </Text>
+                    {props.description ? <Text style={styles.description}>{props.description}</Text> : null}
                 </View>
-            }
-        />
+                <View style={styles.buttonsContainer}>{props.buttons}</View>
+            </View>
+        </Modal>
     );
 }
 

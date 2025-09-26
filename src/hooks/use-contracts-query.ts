@@ -8,15 +8,20 @@ import { Contract } from "~/types/contracts";
 export function useContractsQuery(enabled: boolean) {
     const userStorage = useUserStorage();
 
-    return useQuery<Contract[]>(queryKeys.contracts, () => api.getContracts(), {
-        initialData: userStorage.getContracts(),
-        onSuccess: (contracts) => {
-            logger.log("Contracts loaded");
-            userStorage.setContracts(contracts);
+    return useQuery<Contract[]>({
+        queryKey: queryKeys.contracts,
+        queryFn: async () => {
+            try {
+                const contracts = await api.getContracts();
+                logger.log("Contracts loaded");
+                userStorage.setContracts(contracts);
+                return contracts;
+            } catch (error) {
+                logger.error("Failed to load contracts", error);
+                throw error;
+            }
         },
-        onError: (error) => {
-            logger.error("Failed to load contracts", error);
-        },
+        initialData: () => userStorage.getContracts(),
         enabled,
     });
 }

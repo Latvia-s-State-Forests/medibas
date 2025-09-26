@@ -2,13 +2,13 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { BorderlessBadge } from "~/components/borderless-badge";
-import { IconName, LargeIcon, SmallIcon } from "~/components/icon";
+import { LargeIcon, LargeIconName, SmallIcon } from "~/components/icon";
 import { Spacer } from "~/components/spacer";
 import { Text } from "~/components/text";
 import { theme } from "~/theme";
 
 type RegisterPreyListItemProps = {
-    iconName: IconName<32>;
+    iconName: LargeIconName;
     type: string;
     term: string | undefined;
     onPress: () => void;

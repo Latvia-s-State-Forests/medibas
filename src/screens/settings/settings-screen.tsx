@@ -1,4 +1,4 @@
-import { useInterpret } from "@xstate/react";
+import { useActorRef } from "@xstate/react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
@@ -35,7 +35,16 @@ export function SettingsScreen() {
         isPinDeletedConfirmationOpen: false,
     });
 
-    const accountDeletionActor = useInterpret(() => accountDeletionMachine);
+    const accountDeletionActor = useActorRef(accountDeletionMachine, {
+        inspect: (inspectEvent) => {
+            if (inspectEvent.type === "@xstate.snapshot") {
+                const snapshot = inspectEvent.actorRef?.getSnapshot();
+                if (snapshot?.machine?.id === accountDeletionMachine.id) {
+                    logger.log("🗑️ AD " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event));
+                }
+            }
+        },
+    });
 
     // Check if PIN is configured
     React.useEffect(() => {

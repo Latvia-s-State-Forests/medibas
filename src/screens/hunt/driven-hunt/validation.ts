@@ -59,7 +59,12 @@ export function getDrivenHuntManagementErrors({
     return errors;
 }
 
-export function getSubmitDrivenHuntValidationErrors({ districts, date }: DrivenHuntFormState): string[] {
+export function getSubmitDrivenHuntValidationErrors({
+    districts,
+    date,
+    hunters = [],
+    beaters = [],
+}: DrivenHuntFormState): string[] {
     const errors: string[] = [];
 
     if (districts.length === 0) {
@@ -68,6 +73,19 @@ export function getSubmitDrivenHuntValidationErrors({ districts, date }: DrivenH
 
     if (!date) {
         errors.push(getErrorMessage(i18n.t("dateInput.date")));
+    }
+
+    // Validation: hunter is also in beaters list
+    if (hunters.length > 0 && beaters.length > 0) {
+        const hunterPersonIds = hunters.map((hunter) => hunter.personId);
+        const duplicateBeaters = beaters.filter(
+            (beater) => beater.hunterPersonId && hunterPersonIds.includes(beater.hunterPersonId)
+        );
+        if (duplicateBeaters.length > 0) {
+            duplicateBeaters.forEach((beater) => {
+                errors.push(i18n.t("hunt.drivenHunt.hunterInBothLists", { memberName: beater.fullName }));
+            });
+        }
     }
 
     return errors;

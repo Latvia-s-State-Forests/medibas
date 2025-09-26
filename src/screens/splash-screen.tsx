@@ -1,13 +1,13 @@
 import * as React from "react";
 import { StyleSheet, View } from "react-native";
-import SplashLogo from "~/assets/images/logo-outline.svg";
+import { OtherSplashIcon } from "~/components/icons/other-splash-icon";
 import { ScreenBackgroundLayout } from "~/components/screen-background-layout";
 
 export function SplashScreen() {
     return (
         <ScreenBackgroundLayout>
             <View style={styles.container}>
-                <SplashLogo width={150} />
+                <OtherSplashIcon width={150} />
             </View>
         </ScreenBackgroundLayout>
     );

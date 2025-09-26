@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
-import { IconName, LargeIcon } from "~/components/icon";
+import { LargeIcon, LargeIconName } from "~/components/icon";
 import { Spacer } from "~/components/spacer";
 import { Text } from "~/components/text";
 import { theme } from "~/theme";
@@ -9,7 +9,7 @@ import { formatDateTime } from "~/utils/format-date-time";
 import { isEditedInfrastructureNewer } from "~/utils/is-edited-infrastructure-newer";
 
 type DistrictInfrastructureListItemProps = {
-    iconName: IconName<32>;
+    iconName: LargeIconName;
     type: string;
     createdDate: string;
     changedDate: string;

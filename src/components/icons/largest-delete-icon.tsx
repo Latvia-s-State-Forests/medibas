@@ -1,0 +1,23 @@
+import * as React from "react";
+import Svg, { Path } from "react-native-svg";
+import { Color, theme } from "~/theme";
+
+type LargestDeleteIconProps = {
+    width?: number;
+    height?: number;
+    color?: Color;
+};
+
+export function LargestDeleteIcon({ width = 96, height = 96, color = "gray4" }: LargestDeleteIconProps) {
+    const fillColor = theme.color[color as keyof typeof theme.color];
+    return (
+        <Svg width={width} height={height} viewBox="0 0 96 96" fill={fillColor}>
+            <Path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M48 92c24.3 0 44-19.7 44-44S72.3 4 48 4 4 23.7 4 48s19.7 44 44 44Zm0-4c22.091 0 40-17.909 40-40S70.091 8 48 8 8 25.909 8 48s17.909 40 40 40Z"
+            />
+            <Path d="M53.688 59.462c-.012.08-.154.205-.233.205H42.499c-.08 0-.22-.124-.232-.204L39.9 41.333h16.2l-2.41 18.129h-.002Zm-8.189-22.295c0-.287.65-.834 1.667-.834h1.667c1.017 0 1.666.547 1.666.834V38h-5v-.833ZM61.334 38h-7.5v-.833c0-2.299-2.243-4.167-5-4.167h-1.666c-2.758 0-5 1.868-5 4.167V38h-7.5a1.667 1.667 0 0 0 0 3.333h1.87l2.43 18.562A3.618 3.618 0 0 0 42.502 63h10.95c1.756 0 3.31-1.362 3.54-3.1l2.468-18.567h1.873a1.668 1.668 0 1 0 0-3.333Z" />
+        </Svg>
+    );
+}

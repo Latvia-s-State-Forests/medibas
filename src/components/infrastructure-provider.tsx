@@ -1,8 +1,8 @@
-import { useInterpret, useSelector } from "@xstate/react";
+import { useActorRef, useSelector } from "@xstate/react";
 import { differenceInDays } from "date-fns";
 import { randomUUID } from "expo-crypto";
 import * as React from "react";
-import { ActorRefFrom, assign, createMachine } from "xstate";
+import { ActorRefFrom, and, assign, fromCallback, setup, stateIn } from "xstate";
 import { api } from "~/api";
 import { configuration } from "~/configuration";
 import { logger } from "~/logger";
@@ -28,49 +28,49 @@ type InfrastructureProviderProps = {
 export function InfrastructureProvider({ children, queryData }: InfrastructureProviderProps) {
     const userStorage = useUserStorage();
 
-    const actor = useInterpret(
-        () => {
-            const storedChanges = userStorage.getInfrastructureChanges() ?? [];
+    const activeChanges = React.useMemo(() => {
+        const storedChanges = userStorage.getInfrastructureChanges() ?? [];
 
-            const activeChanges: InfrastructureChange[] = [];
-            const expiredChanges: InfrastructureChange[] = [];
+        const activeChanges: InfrastructureChange[] = [];
+        const expiredChanges: InfrastructureChange[] = [];
 
-            for (const change of storedChanges) {
-                const difference = differenceInDays(new Date(), new Date(change.created));
-                if (Math.abs(difference) <= configuration.huntingInfrastructure.daysToKeepChangesFor) {
-                    activeChanges.push(change);
-                } else {
-                    expiredChanges.push(change);
-                }
+        for (const change of storedChanges) {
+            const difference = differenceInDays(new Date(), new Date(change.created));
+            if (Math.abs(difference) <= configuration.huntingInfrastructure.daysToKeepChangesFor) {
+                activeChanges.push(change);
+            } else {
+                expiredChanges.push(change);
             }
+        }
 
-            if (expiredChanges.length > 0) {
-                logger.log("Removing expired infrastructure changes", expiredChanges);
-                userStorage.setInfrastructureChanges(activeChanges);
-            }
-
-            return infrastructureChangesMachine.withContext({
-                changes: activeChanges,
-            });
-        },
-        {
+        if (expiredChanges.length > 0) {
+            logger.log("Removing expired infrastructure changes", expiredChanges);
+            userStorage.setInfrastructureChanges(activeChanges);
+        }
+        return activeChanges;
+    }, [userStorage]);
+    const actor = useActorRef(
+        infrastructureChangesMachine.provide({
             actions: {
-                saveChanges: (context) => {
+                saveChanges: ({ context }) => {
                     userStorage.setInfrastructureChanges(context.changes);
                 },
             },
+        }),
+        {
+            input: {
+                activeChanges,
+            },
+            inspect: (inspectEvent) => {
+                if (inspectEvent.type === "@xstate.snapshot") {
+                    const snapshot = inspectEvent.actorRef?.getSnapshot();
+                    if (snapshot?.machine?.id === infrastructureChangesMachine.id) {
+                        logger.log("IC " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event));
+                    }
+                }
+            },
         }
     );
-
-    React.useEffect(() => {
-        const subscription = actor.subscribe((state) => {
-            const message = "IC " + JSON.stringify(state.value) + " " + JSON.stringify(state.event);
-            logger.log(message);
-        });
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [actor]);
 
     const changes = useSelector(actor, (state) => state.context.changes);
 
@@ -164,171 +164,119 @@ export function useCreateInfrastructureChange() {
     );
 }
 
-const infrastructureChangesMachine = createMachine(
-    {
-        id: "infrastructureChanges",
-        schema: {
-            context: {} as { changes: InfrastructureChange[] },
-            events: {} as
-                | NetworkStatusEvent
-                | { type: "ADD_CHANGE"; change: InfrastructureChange }
-                | { type: "RETRY_CHANGE"; id: string }
-                | { type: "CHANGE_UPDATED"; change: InfrastructureChange }
-                | { type: "SYNC_SUCCESS" }
-                | { type: "SYNC_FAILURE" },
-        },
-        context: {
-            changes: [],
-        },
-        type: "parallel",
-        states: {
-            infrastructure: {
-                on: {
-                    ADD_CHANGE: {
-                        actions: ["addChange", "saveChanges"],
-                    },
-                    RETRY_CHANGE: {
-                        actions: ["retryChange", "saveChanges"],
-                    },
-                },
-                initial: "idle",
-                states: {
-                    idle: {
-                        always: { target: "syncing", cond: "isSyncPending" },
-                    },
-                    syncing: {
-                        invoke: { src: "sync" },
-                        on: {
-                            CHANGE_UPDATED: {
-                                actions: ["updateChange", "saveChanges"],
-                            },
-                            SYNC_SUCCESS: { target: "idle", actions: ["updateInfrastructure"] },
-                            SYNC_FAILURE: { target: "idle" },
-                        },
-                    },
-                },
-            },
-            network: {
-                invoke: { src: networkStatusMachine },
-                initial: "loading",
-                states: {
-                    loading: {
-                        on: {
-                            NETWORK_AVAILABLE: { target: "online" },
-                            NETWORK_UNAVAILABLE: { target: "offline" },
-                        },
-                    },
-                    online: {
-                        on: {
-                            NETWORK_UNAVAILABLE: { target: "offline" },
-                        },
-                    },
-                    offline: {
-                        on: {
-                            NETWORK_AVAILABLE: { target: "online" },
-                        },
-                    },
-                },
-            },
-        },
-        preserveActionOrder: true,
-        predictableActionArguments: true,
+type InfrastructureChangesEvent =
+    | NetworkStatusEvent
+    | { type: "ADD_CHANGE"; change: InfrastructureChange }
+    | { type: "RETRY_CHANGE"; id: string }
+    | { type: "CHANGE_UPDATED"; change: InfrastructureChange }
+    | { type: "SYNC_SUCCESS" }
+    | { type: "SYNC_FAILURE" };
+
+const infrastructureChangesMachine = setup({
+    types: {
+        context: {} as { changes: InfrastructureChange[] },
+        events: {} as InfrastructureChangesEvent,
+        input: {} as { activeChanges: InfrastructureChange[] },
     },
-    {
-        actions: {
-            addChange: assign({
-                changes: (context, event) => {
-                    if (event.type !== "ADD_CHANGE") {
-                        return context.changes;
-                    }
-                    return context.changes.concat(event.change);
-                },
-            }),
-            retryChange: assign({
-                changes: (context, event) => {
-                    if (event.type !== "RETRY_CHANGE") {
-                        return context.changes;
-                    }
-                    return context.changes.map((change) => {
-                        if (change.id === event.id && change.status === "failure") {
-                            const updatedChange: InfrastructureChange = {
-                                ...change,
-                                status: "pending",
-                                updated: new Date().toISOString(),
-                            };
-                            return updatedChange;
-                        }
-                        return change;
-                    });
-                },
-            }),
-            updateChange: assign({
-                changes: (context, event) => {
-                    if (event.type !== "CHANGE_UPDATED") {
-                        return context.changes;
-                    }
-                    return context.changes.map((change) => {
-                        if (change.id === event.change.id) {
-                            return event.change;
-                        }
-                        // Update related changes with the new infrastructure id
-                        if (
-                            event.change.status === "success" &&
-                            change.infrastructure.guid === event.change.infrastructure.guid
-                        ) {
-                            const updatedChange: InfrastructureChange = {
-                                ...change,
-                                updated: new Date().toISOString(),
-                                infrastructure: {
-                                    ...change.infrastructure,
-                                    id: event.change.infrastructure.id,
-                                },
-                            };
-                            return updatedChange;
-                        }
-                        return change;
-                    });
-                },
-            }),
-            updateInfrastructure: () => {
-                queryClient.invalidateQueries(queryKeys.infrastructure);
-            },
-        },
-        guards: {
-            isSyncPending: (context, event, meta) => {
-                const online = meta.state.matches("network.online");
-                if (!online) {
-                    return false;
+    actions: {
+        addChange: assign({
+            changes: ({ context, event }) => {
+                if (event.type !== "ADD_CHANGE") {
+                    return context.changes;
                 }
-
-                const blockedGuids = new Set<string>();
-
-                for (const change of context.changes) {
-                    if (change.status === "success") {
-                        continue;
-                    }
-                    if (change.status === "failure") {
-                        blockedGuids.add(change.infrastructure.guid);
-                        continue;
-                    }
-                    if (blockedGuids.has(change.infrastructure.guid)) {
-                        continue;
-                    }
-                    return true;
-                }
-
-                return false;
+                return context.changes.concat(event.change);
             },
+        }),
+        retryChange: assign({
+            changes: ({ context, event }) => {
+                if (event.type !== "RETRY_CHANGE") {
+                    return context.changes;
+                }
+                return context.changes.map((change) => {
+                    if (change.id === event.id && change.status === "failure") {
+                        const updatedChange: InfrastructureChange = {
+                            ...change,
+                            status: "pending",
+                            updated: new Date().toISOString(),
+                        };
+                        return updatedChange;
+                    }
+                    return change;
+                });
+            },
+        }),
+        updateChange: assign({
+            changes: ({ context, event }) => {
+                if (event.type !== "CHANGE_UPDATED") {
+                    return context.changes;
+                }
+                return context.changes.map((change) => {
+                    if (change.id === event.change.id) {
+                        return event.change;
+                    }
+                    // Update related changes with the new infrastructure id
+                    if (
+                        event.change.status === "success" &&
+                        change.infrastructure.guid === event.change.infrastructure.guid
+                    ) {
+                        const updatedChange: InfrastructureChange = {
+                            ...change,
+                            updated: new Date().toISOString(),
+                            infrastructure: {
+                                ...change.infrastructure,
+                                id: event.change.infrastructure.id,
+                            },
+                        };
+                        return updatedChange;
+                    }
+                    return change;
+                });
+            },
+        }),
+        updateInfrastructure: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.infrastructure });
         },
-        services: {
-            sync: (context) => (send) => {
+        saveChanges: () => {
+            // handled externally
+        },
+    },
+    guards: {
+        isSyncPending: ({ context }) => {
+            const blockedGuids = new Set<string>();
+
+            for (const change of context.changes) {
+                if (change.status === "success") {
+                    continue;
+                }
+                if (change.status === "failure") {
+                    blockedGuids.add(change.infrastructure.guid);
+                    continue;
+                }
+                if (blockedGuids.has(change.infrastructure.guid)) {
+                    continue;
+                }
+                return true;
+            }
+
+            return false;
+        },
+    },
+    actors: {
+        sync: fromCallback(
+            ({
+                sendBack,
+                input,
+            }: {
+                sendBack: (event: InfrastructureChangesEvent) => void;
+                input: { changes: InfrastructureChange[] };
+            }) => {
                 let ignore = false;
 
                 async function sync() {
                     const blockedGuids = new Set<string>();
                     const idByGuid = new Map<string, number>();
 
-                    for (const change of context.changes) {
+                    for (const change of input.changes) {
                         if (change.status === "success") {
                             idByGuid.set(change.infrastructure.guid, change.infrastructure.id);
                             continue;
@@ -347,7 +295,7 @@ const infrastructureChangesMachine = createMachine(
                                 status: "active",
                                 updated: new Date().toISOString(),
                             };
-                            send({ type: "CHANGE_UPDATED", change: updatedChange });
+                            sendBack({ type: "CHANGE_UPDATED", change: updatedChange });
                             if (change.type === "create") {
                                 const { id } = await api.addInfrastructure({
                                     guid: change.infrastructure.guid,
@@ -386,10 +334,10 @@ const infrastructureChangesMachine = createMachine(
                             }
                             updatedChange.status = "success";
                             updatedChange.updated = new Date().toISOString();
-                            send({ type: "CHANGE_UPDATED", change: updatedChange });
+                            sendBack({ type: "CHANGE_UPDATED", change: updatedChange });
                         } catch (error) {
                             logger.error("Failed to sync infrastructure change", change, error);
-                            send({
+                            sendBack({
                                 type: "CHANGE_UPDATED",
                                 change: { ...change, status: "failure", updated: new Date().toISOString() },
                             });
@@ -400,20 +348,81 @@ const infrastructureChangesMachine = createMachine(
                 sync()
                     .then(() => {
                         if (!ignore) {
-                            send({ type: "SYNC_SUCCESS" });
+                            sendBack({ type: "SYNC_SUCCESS" });
                         }
                     })
                     .catch((error) => {
                         if (!ignore) {
                             logger.error("Failed to sync infrastructure changes", error);
-                            send({ type: "SYNC_FAILURE" });
+                            sendBack({ type: "SYNC_FAILURE" });
                         }
                     });
 
                 return () => {
                     ignore = true;
                 };
+            }
+        ),
+    },
+}).createMachine({
+    id: "infrastructureChanges",
+    context: ({ input }) => {
+        return { changes: input.activeChanges };
+    },
+    type: "parallel",
+    states: {
+        infrastructure: {
+            on: {
+                ADD_CHANGE: {
+                    actions: ["addChange", "saveChanges"],
+                },
+                RETRY_CHANGE: {
+                    actions: ["retryChange", "saveChanges"],
+                },
+            },
+            initial: "idle",
+            states: {
+                idle: {
+                    always: { target: "syncing", guard: and([stateIn({ network: "online" }), "isSyncPending"]) },
+                },
+                syncing: {
+                    invoke: {
+                        src: "sync",
+                        input: ({ context }) => {
+                            return { changes: context.changes };
+                        },
+                    },
+                    on: {
+                        CHANGE_UPDATED: {
+                            actions: ["updateChange", "saveChanges"],
+                        },
+                        SYNC_SUCCESS: { target: "idle", actions: ["updateInfrastructure"] },
+                        SYNC_FAILURE: { target: "idle" },
+                    },
+                },
             },
         },
-    }
-);
+        network: {
+            invoke: { src: networkStatusMachine },
+            initial: "loading",
+            states: {
+                loading: {
+                    on: {
+                        NETWORK_AVAILABLE: { target: "online" },
+                        NETWORK_UNAVAILABLE: { target: "offline" },
+                    },
+                },
+                online: {
+                    on: {
+                        NETWORK_UNAVAILABLE: { target: "offline" },
+                    },
+                },
+                offline: {
+                    on: {
+                        NETWORK_AVAILABLE: { target: "online" },
+                    },
+                },
+            },
+        },
+    },
+});

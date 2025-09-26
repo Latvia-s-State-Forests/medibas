@@ -12,6 +12,7 @@ import {
     hasPermissionToManageInfrastructure,
     hasPermissionToDeleteDistrictMember,
     hasPermissionToManageDrivenHunt,
+    hasPermissionToViewStatistics,
     hasPermissionToUpdateDistrictMemberRoles,
     hasPermissionToViewDistrictDamages,
     hasPermissionToViewDistrictMemberRoles,
@@ -355,6 +356,38 @@ describe("hasPermissionToViewInfrastructuresLayer", () => {
             memberships: [{ huntingDistrictId: 1, isHunter: true }],
         };
         const result = hasPermissionToViewInfrastructuresLayer(profile as Profile, 2);
+        expect(result).toBe(false);
+    });
+});
+
+describe("hasPermissionToViewStatistics", () => {
+    it("returns true if profile.isHunter is true", () => {
+        const profile: unknown = {
+            isHunter: true,
+        };
+        const result = hasPermissionToViewStatistics(profile as Profile);
+        expect(result).toBe(true);
+    });
+
+    it("returns false if profile.isHunter is false", () => {
+        const profile: unknown = {
+            isHunter: false,
+        };
+        const result = hasPermissionToViewStatistics(profile as Profile);
+        expect(result).toBe(false);
+    });
+
+    it("returns false if profile.isHunter is null", () => {
+        const profile: unknown = {
+            isHunter: null,
+        };
+        const result = hasPermissionToViewStatistics(profile as Profile);
+        expect(result).toBe(false);
+    });
+
+    it("returns false if profile.isHunter is undefined", () => {
+        const profile: unknown = {};
+        const result = hasPermissionToViewStatistics(profile as Profile);
         expect(result).toBe(false);
     });
 });

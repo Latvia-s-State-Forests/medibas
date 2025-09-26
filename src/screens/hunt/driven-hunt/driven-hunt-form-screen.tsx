@@ -1,9 +1,10 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useInterpret } from "@xstate/react";
+import { useActorRef } from "@xstate/react";
 import { randomUUID } from "expo-crypto";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HuntDog } from "~/api";
 import { Button } from "~/components/button";
@@ -24,6 +25,7 @@ import { useMemberships } from "~/hooks/use-memberships";
 import { useProfile } from "~/hooks/use-profile";
 import { useSelectedDistrictId } from "~/hooks/use-selected-district-id";
 import { getAppLanguage } from "~/i18n";
+import { logger } from "~/logger";
 import { theme } from "~/theme";
 import { TargetSpecies } from "~/types/hunts";
 import { MemberRole } from "~/types/mtl";
@@ -35,9 +37,9 @@ import { AddDrivenHuntStatusDialog, addDrivenHuntMachine } from "./add-driven-hu
 import { BeaterManagementUsingState } from "./beater-management-using-state";
 import {
     DrivenHuntFormState,
+    getDefaultAddDrivenHuntFormState,
     getDefaultCopyDrivenHuntFormState,
     getDefaultEditDrivenHuntFormState,
-    getDefaultAddDrivenHuntFormState,
 } from "./driven-hunt-form-state";
 import { HunterManagementUsingState } from "./hunter-management-using-state";
 import { getSubmitDrivenHuntValidationErrors } from "./validation";
@@ -47,7 +49,16 @@ type DrivenHuntFormScreenProps = NativeStackScreenProps<RootNavigatorParams, "Dr
 export function DrivenHuntFormScreen({ route }: DrivenHuntFormScreenProps) {
     const { huntToEdit, huntToCopy } = route.params ?? {};
     const { t } = useTranslation();
-    const service = useInterpret(() => addDrivenHuntMachine);
+    const actor = useActorRef(addDrivenHuntMachine, {
+        inspect: (inspectEvent) => {
+            if (inspectEvent.type === "@xstate.snapshot") {
+                const snapshot = inspectEvent.actorRef?.getSnapshot();
+                if (snapshot?.machine?.id === addDrivenHuntMachine.id) {
+                    logger.log("ADH " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event));
+                }
+            }
+        },
+    });
     const classifiers = useClassifiers();
     const insets = useSafeAreaInsets();
     const memberships = useMemberships();
@@ -211,7 +222,7 @@ export function DrivenHuntFormScreen({ route }: DrivenHuntFormScreenProps) {
             )
         );
 
-        service.send({
+        actor.send({
             type: "SUBMIT",
             payload: {
                 id: huntToEdit ? huntToEdit.id : undefined,
@@ -253,7 +264,8 @@ export function DrivenHuntFormScreen({ route }: DrivenHuntFormScreenProps) {
     return (
         <View style={styles.container}>
             <Header title={huntToEdit ? t("hunt.drivenHunt.editHunt.title") : t("hunt.drivenHunt.addHunt")} />
-            <ScrollView
+            <KeyboardAwareScrollView
+                bottomOffset={Platform.select({ ios: 24, android: 48 })}
                 contentContainerStyle={{
                     paddingRight: insets.right + 16,
                     paddingLeft: insets.left + 16,
@@ -301,7 +313,7 @@ export function DrivenHuntFormScreen({ route }: DrivenHuntFormScreenProps) {
                         positionType="drivenHunt"
                         onMark={onSelectPosition}
                         position={drivenHunt.selectedPosition}
-                        activeDistrictId={undefined}
+                        activeDistrictIds={drivenHunt.districts}
                     />
                 </View>
                 <Spacer size={16} />
@@ -382,8 +394,8 @@ export function DrivenHuntFormScreen({ route }: DrivenHuntFormScreenProps) {
                     </>
                 ) : null}
                 <Button disabled={hasValidationErrors} onPress={onSubmit} title={t("damage.saveAndSend")} />
-            </ScrollView>
-            <AddDrivenHuntStatusDialog service={service} editing={huntToEdit !== undefined} />
+            </KeyboardAwareScrollView>
+            <AddDrivenHuntStatusDialog actor={actor} editing={huntToEdit !== undefined} />
         </View>
     );
 }

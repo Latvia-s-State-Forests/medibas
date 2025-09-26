@@ -1,0 +1,22 @@
+import * as React from "react";
+import Svg, { Path } from "react-native-svg";
+import { Color, theme } from "~/theme";
+
+type SmallNotValidIconProps = {
+    width?: number;
+    height?: number;
+    color?: Color;
+};
+
+export function SmallNotValidIcon({ width = 16, height = 16, color = "gray8" }: SmallNotValidIconProps) {
+    const fillColor = theme.color[color as keyof typeof theme.color];
+    return (
+        <Svg width={width} height={height} viewBox="0 0 16 16" fill={fillColor}>
+            <Path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M8 14C6.75466 13.9998 5.5406 13.6099 4.528 12.885L12.886 4.529C13.6103 5.54147 13.9998 6.75512 14 8C14 11.309 11.309 14 8 14ZM8 2C9.294 2 10.49 2.416 11.472 3.115L3.114 11.471C2.38969 10.4585 2.00017 9.24488 2 8C2 4.691 4.691 2 8 2ZM8 0C3.589 0 0 3.589 0 8C0 12.411 3.589 16 8 16C12.411 16 16 12.411 16 8C16 3.589 12.411 0 8 0Z"
+            />
+        </Svg>
+    );
+}

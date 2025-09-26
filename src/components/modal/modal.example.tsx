@@ -29,7 +29,9 @@ export function ModalExampleScreen() {
             <Header title="Modal" />
             <ScrollView contentContainerStyle={[{ paddingBottom: insets.bottom + 24 }]}>
                 <PressableListItem label="Empty Modal" background="white" onPress={() => setShowEmptyModal(true)} />
-                <Modal visible={showEmptyModal} children onClose={() => setShowEmptyModal(false)} />
+                <Modal visible={showEmptyModal} onClose={() => setShowEmptyModal(false)}>
+                    <View></View>
+                </Modal>
                 <PressableListItem
                     label="Success with description"
                     background="white"

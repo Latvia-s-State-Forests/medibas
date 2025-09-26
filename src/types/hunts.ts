@@ -188,3 +188,9 @@ export const approveOrRejectIndividualHuntSchema = z.object({
 });
 
 export type ApproveOrRejectIndividualHunt = z.infer<typeof approveOrRejectIndividualHuntSchema>;
+
+export type HuntsRequestTiming = {
+    startedAt: string;
+    finishedAt: string;
+    duration: number;
+};

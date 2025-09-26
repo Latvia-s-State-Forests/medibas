@@ -1,5 +1,5 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { useActor, useMachine } from "@xstate/react";
+import { useMachine, useSelector } from "@xstate/react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
@@ -10,6 +10,7 @@ import { BottomSheet } from "~/components/bottom-sheet";
 import { Button } from "~/components/button";
 import { Collapsible } from "~/components/collapsible/collapsible";
 import { Dialog } from "~/components/dialog";
+import { DrawToolbar } from "~/components/draw-toolbar";
 import { FeatureListItem } from "~/components/feature-list-item";
 import { useInfrastructureFeatures } from "~/components/infrastructure-provider";
 import { Map, MapHandle } from "~/components/map/map";
@@ -23,8 +24,9 @@ import { useDistricts } from "~/hooks/use-districts";
 import { useFeatures } from "~/hooks/use-features";
 import { useAllHuntedAnimals } from "~/hooks/use-hunted-animals";
 import { useSelectedDistrictId } from "~/hooks/use-selected-district-id";
+import { useAllUnlimitedHuntedAnimals } from "~/hooks/use-unlimited-hunted-animals";
 import { logger } from "~/logger";
-import { mapService } from "~/machines/map-machine";
+import { mapActor } from "~/machines/map-machine";
 import { trackPositionMachine } from "~/machines/track-position-machine";
 import { queryClient, queryKeys } from "~/query-client";
 import { theme } from "~/theme";
@@ -35,6 +37,10 @@ import { SelectedFeature } from "~/types/hunt-map";
 import { HuntedAnimal } from "~/types/hunted-animals";
 import { Infrastructure } from "~/types/infrastructure";
 import { MapService, MapServiceCustomWithFeatures } from "~/types/map";
+import { UnlimitedHuntedAnimal } from "~/types/unlimited-hunted-animals";
+import { useLineDrawing } from "../../hooks/use-line-drawing";
+import { usePolygonDrawing } from "../../hooks/use-polygon-drawing";
+import { SaveDrawnShapeModal } from "./save-drawn-shape-modal";
 
 const JITTER_THRESHOLD = 2;
 
@@ -48,11 +54,15 @@ type SelectedFeatureData = {
     "district-hunted-roe-deer": Array<HuntedAnimal & { featureType: "district-hunted-roe-deer" }>;
     "district-hunted-boar": Array<HuntedAnimal & { featureType: "district-hunted-boar" }>;
     "district-infrastructures": Array<Infrastructure & { featureType: "district-infrastructures" }>;
+    "district-hunted-others-unlimited": Array<
+        UnlimitedHuntedAnimal & { featureType: "district-hunted-others-unlimited" }
+    >;
 };
 
 export function MapScreen() {
     const infrastructures = useInfrastructureFeatures();
     const huntedAnimals = useAllHuntedAnimals();
+    const unlimitedHuntedAnimals = useAllUnlimitedHuntedAnimals();
     const { t } = useTranslation();
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
@@ -63,6 +73,95 @@ export function MapScreen() {
     const districtDamages = useAllDistrictDamages();
     const [selectedFeaturesCluster, setSelectedFeaturesCluster] = React.useState<SelectedFeature[]>([]);
     const [selectedFeature, setSelectedFeature] = React.useState<SelectedFeature | null>(null);
+    const lineDrawing = useLineDrawing(mapRef);
+    const polygonDrawing = usePolygonDrawing(mapRef);
+    const [drawType, setDrawType] = React.useState<"line" | "polygon">("line");
+    const [shapeDrawn, setShapeDrawn] = React.useState(false);
+    const [hasMultiplePoints, setHasMultiplePoints] = React.useState(false);
+    const [hasFirstPoint, setHasFirstPoint] = React.useState(false);
+    const [isSaveShapeModalVisible, setSaveShapeModalVisible] = React.useState(false);
+    const [shapeName, setShapeName] = React.useState<string>("");
+    const [showAdditionalTools, setShowAdditionalTools] = React.useState(false);
+    const onLineDraw = React.useCallback(() => {
+        // Clear any active polygon drawing before starting line drawing
+        polygonDrawing.deletePolygon();
+        setHasFirstPoint(false);
+        setDrawType("line");
+        setShapeDrawn(false);
+        setHasMultiplePoints(false);
+        lineDrawing.startLineDraw();
+    }, [lineDrawing, polygonDrawing]);
+
+    const onPolygonDraw = React.useCallback(() => {
+        // Clear any active line drawing before starting polygon drawing
+        lineDrawing.deleteLine();
+        setHasFirstPoint(false);
+        setDrawType("polygon");
+        setShapeDrawn(false);
+        setHasMultiplePoints(false);
+        polygonDrawing.startPolygonDraw();
+    }, [lineDrawing, polygonDrawing]);
+
+    const onDeleteLine = React.useCallback(() => {
+        lineDrawing.deleteLine();
+        setHasFirstPoint(false);
+        setShapeDrawn(false);
+    }, [lineDrawing]);
+
+    const onDeletePolygon = React.useCallback(() => {
+        polygonDrawing.deletePolygon();
+        setShapeDrawn(false);
+        setHasFirstPoint(false);
+    }, [polygonDrawing]);
+
+    const onFinishDrawing = React.useCallback(() => {
+        mapRef.current?.sendAction({
+            type: "finishCurrentDrawing",
+        });
+        setHasMultiplePoints(false);
+    }, []);
+
+    const onDrawingCleared = React.useCallback(() => {
+        setShapeDrawn(false);
+    }, []);
+
+    const onShapeDrawn = React.useCallback(
+        (coordinates: number[][], shapeId: string, type: "line" | "polygon") => {
+            if (type === "line") {
+                lineDrawing.onLineDrawn(coordinates, shapeId);
+            } else {
+                polygonDrawing.onPolygonDrawn(coordinates, shapeId);
+            }
+            setShapeDrawn(true);
+            setHasMultiplePoints(false);
+        },
+        [lineDrawing, polygonDrawing]
+    );
+
+    const onShapeModified = React.useCallback(
+        (coordinates: number[][], shapeId: string, type: "line" | "polygon") => {
+            if (type === "line") {
+                lineDrawing.onLineModified(coordinates, shapeId);
+            } else {
+                polygonDrawing.onPolygonModified(coordinates, shapeId);
+            }
+            setShapeDrawn(true);
+        },
+        [lineDrawing, polygonDrawing]
+    );
+
+    const saveShape = React.useCallback(
+        (shapeName: string) => {
+            if (drawType === "line") {
+                lineDrawing.saveLine(shapeName);
+            } else {
+                polygonDrawing.savePolygon(shapeName);
+            }
+            setShapeDrawn(false);
+        },
+        [drawType, lineDrawing, polygonDrawing]
+    );
+
     const selectedFeaturesData = selectedFeaturesCluster.reduce(
         (acc, feature, index) => {
             if (feature.layer === "district-infrastructures") {
@@ -93,6 +192,18 @@ export function MapScreen() {
                 const f = huntedAnimals.data.find((feat) => feat.huntReportId === feature.id);
                 if (f) {
                     acc["district-hunted-roe-deer"].push({ ...f, featureType: "district-hunted-roe-deer" });
+                }
+            }
+            if (
+                feature.layer === "district-hunted-others-unlimited" &&
+                unlimitedHuntedAnimals.data.some((feat) => feat.huntReportId === feature.id)
+            ) {
+                const f = unlimitedHuntedAnimals.data.find((feat) => feat.huntReportId === feature.id);
+                if (f) {
+                    acc["district-hunted-others-unlimited"].push({
+                        ...f,
+                        featureType: "district-hunted-others-unlimited",
+                    });
                 }
             }
             if (feature.layer === "district-hunted-boar") {
@@ -139,6 +250,7 @@ export function MapScreen() {
             "district-hunted-moose": [],
             "district-hunted-roe-deer": [],
             "district-hunted-boar": [],
+            "district-hunted-others-unlimited": [],
         } as SelectedFeatureData
     );
 
@@ -161,6 +273,8 @@ export function MapScreen() {
                 return (feat as HuntedAnimal).huntReportId === selectedFeature?.id;
             } else if (selectedFeature?.layer === "district-hunted-boar") {
                 return (feat as HuntedAnimal).huntReportId === selectedFeature?.id;
+            } else if (selectedFeature?.layer === "district-hunted-others-unlimited") {
+                return (feat as UnlimitedHuntedAnimal).huntReportId === selectedFeature?.id;
             } else {
                 return (feat as Feature).properties.id === selectedFeature?.id;
             }
@@ -179,6 +293,7 @@ export function MapScreen() {
                 .with("district-hunted-red-deer", () => t("map.bottomSheet.subtitle.districtHuntedAnimals"))
                 .with("district-hunted-moose", () => t("map.bottomSheet.subtitle.districtHuntedAnimals"))
                 .with("district-hunted-roe-deer", () => t("map.bottomSheet.subtitle.districtHuntedAnimals"))
+                .with("district-hunted-others-unlimited", () => t("map.bottomSheet.subtitle.districtHuntedAnimals"))
                 .with("district-hunted-boar", () => t("map.bottomSheet.subtitle.districtHuntedAnimals"))
                 .exhaustive();
         }
@@ -218,49 +333,51 @@ export function MapScreen() {
         });
     }, [features, districtDamages, selectedDistrictId, selectedFeaturesCluster.length]);
 
-    const [layerState, layerSend] = useActor(mapService);
-    const [trackingState, trackingSend] = useMachine(() => trackPositionMachine, {
-        actions: {
-            setPositionOnMap: (context) => {
-                if (!context.location) {
-                    return;
-                }
-                mapRef.current?.sendAction({
-                    type: "setLocation",
-                    action: "update",
-                    center: { position: context.location, accuracy: context.accuracy },
-                    follow: trackingState.matches({ tracking: { mode: "active" } }),
-                    animated: true,
-                });
-            },
-            removePositionFromMap: () => {
-                mapRef.current?.sendAction({
-                    type: "setLocation",
-                    action: "disable",
-                });
-            },
-            restorePositionOnMap: (context) => {
-                if (!context.location) {
-                    return;
-                }
+    const layerContext = useSelector(mapActor, (state) => state.context);
+    const [trackingState, trackingSend] = useMachine(
+        trackPositionMachine.provide({
+            actions: {
+                setPositionOnMap: ({ context }) => {
+                    if (!context.location) {
+                        return;
+                    }
+                    mapRef.current?.sendAction({
+                        type: "setLocation",
+                        action: "update",
+                        center: { position: context.location, accuracy: context.accuracy },
+                        follow: trackingState.matches({ tracking: { mode: "active" } }),
+                        animated: true,
+                    });
+                },
+                removePositionFromMap: () => {
+                    mapRef.current?.sendAction({
+                        type: "setLocation",
+                        action: "disable",
+                    });
+                },
+                restorePositionOnMap: ({ context }) => {
+                    if (!context.location) {
+                        return;
+                    }
 
-                mapRef.current?.sendAction({
-                    type: "setLocation",
-                    action: "update",
-                    center: { position: context.location, accuracy: context.accuracy },
-                    follow: true,
-                    animated: true,
-                });
+                    mapRef.current?.sendAction({
+                        type: "setLocation",
+                        action: "update",
+                        center: { position: context.location, accuracy: context.accuracy },
+                        follow: true,
+                        animated: true,
+                    });
+                },
             },
-        },
-    });
+        })
+    );
 
     const [mapLoaded, setMapLoaded] = React.useState(false);
 
     // Whenever the screen is focused, refetch districts
     useFocusEffect(
         React.useCallback(() => {
-            queryClient.invalidateQueries(queryKeys.districts);
+            queryClient.invalidateQueries({ queryKey: queryKeys.districts });
         }, [])
     );
 
@@ -291,7 +408,7 @@ export function MapScreen() {
         mapRef.current?.sendAction({
             type: "setDistricts",
             districts,
-            activeDistrictId: selectedDistrictId,
+            activeDistrictIds: selectedDistrictId ? [selectedDistrictId] : [],
         });
     }, [mapLoaded, districts, selectedDistrictId]);
 
@@ -358,6 +475,13 @@ export function MapScreen() {
                 });
             }
 
+            if (service.id === "district-hunted-others-unlimited") {
+                acc.push({
+                    ...service,
+                    features: unlimitedHuntedAnimals.features,
+                });
+            }
+
             if (service.id === "district-infrastructures") {
                 acc.push({ ...service, features: infrastructures.features });
             }
@@ -380,7 +504,21 @@ export function MapScreen() {
         selectedFeaturesCluster.length,
         infrastructures,
         huntedAnimals,
+        unlimitedHuntedAnimals,
     ]);
+
+    // Create a stable reference to the restore function
+    const restoreVisibleLinesRef = React.useRef(lineDrawing.restoreVisibleLines);
+    const restoreVisiblePolygonsRef = React.useRef(polygonDrawing.restoreVisiblePolygons);
+
+    // Update the ref when the function changes
+    React.useEffect(() => {
+        restoreVisibleLinesRef.current = lineDrawing.restoreVisibleLines;
+    }, [lineDrawing.restoreVisibleLines]);
+
+    React.useEffect(() => {
+        restoreVisiblePolygonsRef.current = polygonDrawing.restoreVisiblePolygons;
+    }, [polygonDrawing.restoreVisiblePolygons]);
 
     React.useEffect(() => {
         if (!mapLoaded) {
@@ -388,9 +526,15 @@ export function MapScreen() {
         }
         mapRef.current?.sendAction({
             type: "toggleLayer",
-            activeLayers: layerState.context.activeLayerIds,
+            activeLayers: layerContext.activeLayerIds,
         });
-    }, [layerState.context.activeLayerIds, mapLoaded]);
+
+        // Restore shapes after layer toggle (and on initial load)
+        setTimeout(() => {
+            restoreVisibleLinesRef.current();
+            restoreVisiblePolygonsRef.current();
+        }, 300);
+    }, [layerContext.activeLayerIds, mapLoaded]);
 
     function onToggleLocation() {
         onDeselectFeatures();
@@ -420,7 +564,7 @@ export function MapScreen() {
             type: "MAP_DRAGGED",
         });
 
-        if (center === layerState.context.center && zoom === layerState.context.zoom) {
+        if (center === layerContext.center && zoom === layerContext.zoom) {
             return;
         }
 
@@ -433,7 +577,7 @@ export function MapScreen() {
     }
 
     function onViewPositionChanged(center: GeoJSON.Position, zoom: number | undefined) {
-        layerSend({ type: "VIEW_POSITION_CHANGED", center, zoom });
+        mapActor.send({ type: "VIEW_POSITION_CHANGED", center, zoom });
     }
 
     function smoothHeading(rawHeading: number, prevHeading: number | undefined, alpha: number = 0.3): number {
@@ -518,6 +662,8 @@ export function MapScreen() {
 
     async function onLoad() {
         setMapLoaded(true);
+        lineDrawing.onMapLoaded();
+        polygonDrawing.onMapLoaded();
         const { bounds, minZoom, maxZoom, services } = configuration.map;
 
         const layers = (services as MapService[]).map((service) => {
@@ -533,6 +679,8 @@ export function MapScreen() {
                 return { ...service, features: huntedAnimals.features };
             } else if (service.id === "district-hunted-roe-deer") {
                 return { ...service, features: huntedAnimals.features };
+            } else if (service.id === "district-hunted-others-unlimited") {
+                return { ...service, features: unlimitedHuntedAnimals.features };
             } else if (service.id === "district-hunted-boar") {
                 return { ...service, features: huntedAnimals.features };
             } else if (service.id === "district-infrastructures") {
@@ -544,7 +692,7 @@ export function MapScreen() {
             }
         });
 
-        const { activeLayerIds, center, zoom } = layerState.context;
+        const { activeLayerIds, center, zoom } = layerContext;
 
         mapRef.current?.sendAction({
             type: "initialize",
@@ -562,7 +710,7 @@ export function MapScreen() {
 
     function onSelectClusterFeature(selectedFeatures: SelectedFeature[]) {
         setSelectedFeaturesCluster(() => selectedFeatures);
-        if (selectedFeatures.length == 1) {
+        if (selectedFeatures.length === 1) {
             const layer = selectedFeatures[0].layer;
             const id = selectedFeatures[0].id;
             setSelectedFeature(() => {
@@ -619,6 +767,16 @@ export function MapScreen() {
                     type: "selectIndividualFeature",
                     feature: { ...f, featureType: layer as "district-hunted-roe-deer" },
                 });
+            } else if (layer === "district-hunted-others-unlimited") {
+                const f = unlimitedHuntedAnimals.features.find((f) => f.properties.id === id);
+                if (!f) {
+                    logger.error("Selected unlimited hunted animal feature not found", { layer, id });
+                    return;
+                }
+                mapRef.current?.sendAction({
+                    type: "selectIndividualFeature",
+                    feature: { ...f, featureType: layer as "district-hunted-others-unlimited" },
+                });
             } else if (layer === "district-hunted-boar") {
                 const f = huntedAnimals.features.find((f) => f.properties.id === id);
                 if (!f) {
@@ -666,6 +824,7 @@ export function MapScreen() {
             | (HuntedAnimal & { featureType: "district-hunted-red-deer" })
             | (HuntedAnimal & { featureType: "district-hunted-moose" })
             | (HuntedAnimal & { featureType: "district-hunted-roe-deer" })
+            | (UnlimitedHuntedAnimal & { featureType: "district-hunted-others-unlimited" })
             | (HuntedAnimal & { featureType: "district-hunted-boar" })
     ) {
         if (feature.featureType === "district-damages") {
@@ -734,6 +893,17 @@ export function MapScreen() {
                 feature: { ...f, featureType: "district-hunted-boar" },
             });
             setSelectedFeature({ id: feature.huntReportId, layer: "district-hunted-boar" });
+        } else if (feature.featureType === "district-hunted-others-unlimited") {
+            const f = unlimitedHuntedAnimals.features.find((feat) => feat.properties.id === feature.huntReportId);
+            if (!f) {
+                logger.error("Selected unlimited hunted animal feature not found", { feature });
+                return;
+            }
+            mapRef.current?.sendAction({
+                type: "selectIndividualFeature",
+                feature: { ...f, featureType: "district-hunted-others-unlimited" },
+            });
+            setSelectedFeature({ id: feature.huntReportId, layer: "district-hunted-others-unlimited" });
         } else if (feature.featureType === "district-infrastructures") {
             const f = infrastructures.features.find((feat) => feat.properties.id === feature.id);
             if (!f) {
@@ -777,6 +947,17 @@ export function MapScreen() {
                         onMapDragged={onMapDragged}
                         onViewPositionChanged={onViewPositionChanged}
                         onFeaturesSelected={onSelectClusterFeature}
+                        onLineDrawn={(coords, id) => onShapeDrawn(coords, id, "line")}
+                        onPolygonDrawn={(coords, id) => onShapeDrawn(coords, id, "polygon")}
+                        onPolygonModified={(coords, id) => onShapeModified(coords, id, "polygon")}
+                        onLineModified={(coords, id) => onShapeModified(coords, id, "line")}
+                        onDrawingCleared={onDrawingCleared}
+                        onMultiplePoints={(hasMultiplePoints) => {
+                            setHasMultiplePoints(hasMultiplePoints);
+                        }}
+                        onFirstPoint={(hasFirstPoint) => {
+                            setHasFirstPoint(hasFirstPoint);
+                        }}
                     />
                     <View style={[styles.leftContainer, { marginTop: insets.top + 16, marginLeft: insets.left + 16 }]}>
                         <SettingsButton onPress={onNavigateMenu} />
@@ -797,10 +978,26 @@ export function MapScreen() {
                             name="target"
                         />
                     </View>
-                    <View style={styles.bottomContainer}>
+                    <View style={styles.drawingButton}>
+                        <DrawToolbar
+                            onDeletePolygon={onDeletePolygon}
+                            onDeleteLine={onDeleteLine}
+                            shapeDrawn={shapeDrawn}
+                            onLineDraw={onLineDraw}
+                            onPolygonDraw={onPolygonDraw}
+                            onSave={() => setSaveShapeModalVisible(true)}
+                            showAdditionalTools={showAdditionalTools}
+                            setShowAdditionalTools={setShowAdditionalTools}
+                            hasMultiplePoints={hasMultiplePoints}
+                            hasFirstPoint={hasFirstPoint}
+                            onFinishDrawing={onFinishDrawing}
+                        />
+                    </View>
+                    <View style={styles.layerButton}>
                         <SquareIconButton onPress={() => navigation.navigate("MapSettingsModal")} name="mapLayers" />
                     </View>
                 </View>
+
                 <BottomSheet
                     visible={!!selectedFeaturesCluster.length}
                     title={bottomSheetTitle()}
@@ -896,6 +1093,27 @@ export function MapScreen() {
                                                 onSelectIndividualFeature({
                                                     ...feature,
                                                     featureType: "district-hunted-roe-deer",
+                                                })
+                                            }
+                                        />
+                                    ))}
+                                </Collapsible>
+                            ) : null}
+                            {selectedFeaturesData["district-hunted-others-unlimited"].length ? (
+                                <Collapsible
+                                    title={t("map.settings.layers.huntedAnimals.unlimited")}
+                                    badgeCount={selectedFeaturesData["district-hunted-others-unlimited"].length}
+                                    defaultCollapsed={false}
+                                    style={styles.listSpacing}
+                                >
+                                    {selectedFeaturesData["district-hunted-others-unlimited"]?.map((feature) => (
+                                        <FeatureListItem
+                                            feature={{ ...feature, featureType: "district-hunted-others-unlimited" }}
+                                            key={feature.huntReportId}
+                                            onPress={() =>
+                                                onSelectIndividualFeature({
+                                                    ...feature,
+                                                    featureType: "district-hunted-others-unlimited",
                                                 })
                                             }
                                         />
@@ -1008,7 +1226,21 @@ export function MapScreen() {
                     )}
                 </BottomSheet>
             </Animated.View>
-
+            <SaveDrawnShapeModal
+                visible={isSaveShapeModalVisible}
+                value={shapeName}
+                onChangeText={setShapeName}
+                onConfirm={() => {
+                    saveShape(shapeName);
+                    setSaveShapeModalVisible(false);
+                    setShapeName("");
+                    setShowAdditionalTools(false);
+                }}
+                onReject={() => {
+                    setSaveShapeModalVisible(false);
+                    setShapeName("");
+                }}
+            />
             <Dialog
                 visible={trackingState.matches("error")}
                 icon="failure"
@@ -1054,10 +1286,15 @@ const styles = StyleSheet.create({
         right: 0,
         flexDirection: "row",
     },
-    bottomContainer: {
+    drawingButton: {
         position: "absolute",
         bottom: 16,
         left: 16,
+    },
+    layerButton: {
+        position: "absolute",
+        bottom: 16,
+        left: 76,
     },
     sheetContent: {
         paddingHorizontal: 16,

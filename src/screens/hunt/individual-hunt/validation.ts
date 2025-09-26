@@ -16,6 +16,7 @@ export function getSubmitIndividualHuntValidationErrors({
     selectedSpeciesList,
     selectedSpeciesWithEquipmentList,
     hasEquipment,
+    huntAllSpecies,
 }: IndividualHuntFormState & { huntPlace: HuntPlace; hasEquipment: boolean }): string[] {
     const errors: string[] = [];
 
@@ -39,11 +40,24 @@ export function getSubmitIndividualHuntValidationErrors({
         errors.push(getErrorMessage(i18n.t("hunt.individualHunt.huntPlace")));
     }
 
-    if (huntPlace !== HuntPlace.WaterBody && !hasEquipment && selectedSpeciesList.length === 0) {
+    // Skip species validation if hunting all species in station
+    const huntAllSpeciesToggled = huntPlace === HuntPlace.InTheStation && huntAllSpecies;
+
+    if (
+        huntPlace !== HuntPlace.WaterBody &&
+        !huntAllSpeciesToggled &&
+        !hasEquipment &&
+        selectedSpeciesList.length === 0
+    ) {
         errors.push(getErrorMessage(i18n.t("hunt.individualHunt.huntingSpecies")));
     }
 
-    if (huntPlace !== HuntPlace.WaterBody && hasEquipment && selectedSpeciesWithEquipmentList.length === 0) {
+    if (
+        huntPlace !== HuntPlace.WaterBody &&
+        !huntAllSpeciesToggled &&
+        hasEquipment &&
+        selectedSpeciesWithEquipmentList.length === 0
+    ) {
         errors.push(getErrorMessage(i18n.t("hunt.individualHunt.huntingSpecies")));
     }
 

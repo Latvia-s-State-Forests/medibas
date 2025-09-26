@@ -11,7 +11,7 @@ import { useConfirmationDialog } from "~/components/confirmation-dialog-provider
 import { ErrorMessage } from "~/components/error-message";
 import { Header } from "~/components/header";
 import { useHuntActivitiesContext } from "~/components/hunt-activities-provider";
-import { NavigationButton } from "~/components/navigation-button";
+import { NavigationButtonField } from "~/components/navigation-button-field";
 import { QRContainer } from "~/components/qr-code/qr-container";
 import { ReadOnlyField } from "~/components/read-only-field";
 import { ShareButton } from "~/components/share-button";
@@ -149,6 +149,8 @@ function Content({ hunt }: ContentProps) {
         return hunt.districts.map((district) => district.id);
     }, [hunt.districts]);
 
+    const isHuntConcluded = hunt.huntEventStatusId === HuntEventStatus.Concluded;
+
     return (
         <View style={styles.container}>
             <Header
@@ -217,24 +219,18 @@ function Content({ hunt }: ContentProps) {
                                 latitude={hunt.meetingPointY}
                                 longitude={hunt.meetingPointX}
                             />
-                            <View
-                                style={hunt.huntEventStatusId !== HuntEventStatus.Concluded ? styles.navigation : null}
-                            >
-                                <ReadOnlyField
-                                    label={t("hunt.drivenHunt.detailScreen.meetingPoint")}
-                                    value={formatPosition({
-                                        latitude: hunt.meetingPointY,
-                                        longitude: hunt.meetingPointX,
-                                    })}
-                                />
-                                {hunt.huntEventStatusId !== HuntEventStatus.Concluded ? (
-                                    <NavigationButton
-                                        latitude={hunt.meetingPointY}
-                                        longitude={hunt.meetingPointX}
-                                        locationLabel={locationLabel}
-                                    />
-                                ) : null}
-                            </View>
+
+                            <NavigationButtonField
+                                label={t("hunt.individualHunt.locationCoordinates")}
+                                value={formatPosition({
+                                    latitude: hunt.meetingPointY,
+                                    longitude: hunt.meetingPointX,
+                                })}
+                                latitude={hunt.meetingPointY}
+                                longitude={hunt.meetingPointX}
+                                locationLabel={locationLabel}
+                                hideNavigationButton={isHuntConcluded}
+                            />
                         </>
                     ) : null}
 
@@ -487,11 +483,6 @@ const styles = StyleSheet.create({
     },
     huntCode: {
         flex: 1,
-    },
-    navigation: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
     },
     errorsContainer: {
         gap: 19,

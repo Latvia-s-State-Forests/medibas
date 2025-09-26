@@ -8,15 +8,20 @@ import { District } from "~/types/districts";
 export function useDistrictsQuery(enabled: boolean) {
     const userStorage = useUserStorage();
 
-    return useQuery<District[]>(queryKeys.districts, () => api.getDistricts(), {
-        initialData: userStorage.getDistricts(),
-        onSuccess: (districts) => {
-            logger.log("Districts loaded");
-            userStorage.setDistricts(districts);
+    return useQuery<District[]>({
+        queryKey: queryKeys.districts,
+        queryFn: async () => {
+            try {
+                const districts = await api.getDistricts();
+                logger.log("Districts loaded");
+                userStorage.setDistricts(districts);
+                return districts;
+            } catch (error) {
+                logger.error("Failed to load districts", error);
+                throw error;
+            }
         },
-        onError: (error) => {
-            logger.error("Failed to load districts", error);
-        },
+        initialData: () => userStorage.getDistricts(),
         enabled,
     });
 }

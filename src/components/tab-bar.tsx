@@ -1,8 +1,8 @@
 import * as React from "react";
-import { View, StyleSheet, Pressable } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Badge } from "~/components/badge";
-import { IconName, MediumIcon } from "~/components/icon";
+import { MediumIcon, MediumIconName } from "~/components/icon";
 import { Text } from "~/components/text";
 import { theme } from "~/theme";
 
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
 
 type TabBarItemProps = {
     label: string;
-    icon: IconName<24>;
+    icon: MediumIconName;
     onPress: () => void;
     badgeCount?: number;
     active: boolean;

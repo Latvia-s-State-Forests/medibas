@@ -1,4 +1,5 @@
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import RnModal from "react-native-modal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "~/theme";
@@ -18,21 +19,28 @@ export function Modal(props: ModalProps) {
             backdropColor={theme.color.green}
             backdropOpacity={0.8}
             isVisible={props.visible}
-            avoidKeyboard
+            statusBarTranslucent
         >
-            <View
-                style={[
-                    styles.content,
-                    {
-                        marginLeft: insets.left + 16,
-                        marginRight: insets.right + 16,
-                        marginBottom: insets.bottom + 16,
-                        marginTop: insets.top + 16,
-                    },
-                ]}
+            <KeyboardAwareScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollViewContent}
+                keyboardShouldPersistTaps="handled"
+                bottomOffset={Platform.select({ ios: 24, android: 48 })}
             >
-                {props.children}
-            </View>
+                <View
+                    style={[
+                        styles.content,
+                        {
+                            marginLeft: insets.left + 16,
+                            marginRight: insets.right + 16,
+                            marginBottom: insets.bottom + 16,
+                            marginTop: insets.top + 16,
+                        },
+                    ]}
+                >
+                    {props.children}
+                </View>
+            </KeyboardAwareScrollView>
         </RnModal>
     );
 }
@@ -40,6 +48,13 @@ export function Modal(props: ModalProps) {
 const styles = StyleSheet.create({
     container: {
         margin: 0,
+    },
+    scrollView: {
+        flex: 1,
+    },
+    scrollViewContent: {
+        flexGrow: 1,
+        justifyContent: "center",
     },
     content: {
         borderRadius: 16,

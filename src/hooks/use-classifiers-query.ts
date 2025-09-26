@@ -8,14 +8,19 @@ import { Classifiers } from "~/types/classifiers";
 export function useClassifiersQuery() {
     const userStorage = useUserStorage();
 
-    return useQuery<Classifiers>(queryKeys.classifiers, () => api.getClassifiers(), {
-        initialData: userStorage.getClassifiers(),
-        onSuccess: (classifiers) => {
-            logger.log("Classifiers loaded");
-            userStorage.setClassifiers(classifiers);
+    return useQuery<Classifiers>({
+        queryKey: queryKeys.classifiers,
+        queryFn: async () => {
+            try {
+                const classifiers = await api.getClassifiers();
+                logger.log("Classifiers loaded");
+                userStorage.setClassifiers(classifiers);
+                return classifiers;
+            } catch (error) {
+                logger.error("Failed to load classifiers", error);
+                throw error;
+            }
         },
-        onError: (error) => {
-            logger.error("Failed to load classifiers", error);
-        },
+        initialData: () => userStorage.getClassifiers(),
     });
 }

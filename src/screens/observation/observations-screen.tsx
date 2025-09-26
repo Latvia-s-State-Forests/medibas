@@ -3,7 +3,8 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { randomUUID } from "expo-crypto";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "~/components/button";
 import { CurrentPosition, CurrentPositionHandle } from "~/components/current-position/current-position";
@@ -71,7 +72,7 @@ export function ObservationsScreen({ route }: ObservationsScreenProps) {
     const { t } = useTranslation();
     const classifiers = useClassifiers();
     const userStorage = useUserStorage();
-    const scrollViewRef = React.useRef<ScrollView>(null);
+    const scrollViewRef = React.useRef<React.ComponentRef<typeof KeyboardAwareScrollView>>(null);
     const currentPositionRef = React.useRef<CurrentPositionHandle>(null);
     const [observations, setObservations] = React.useState<ObservationsState>(
         () => route.params?.initialState ?? getDefaultObservationsState(classifiers, route.params?.huntEventId)
@@ -213,7 +214,8 @@ export function ObservationsScreen({ route }: ObservationsScreenProps) {
                         : t("observations.title")
                 }
             />
-            <ScrollView
+            <KeyboardAwareScrollView
+                bottomOffset={Platform.select({ ios: 24, android: 48 })}
                 ref={scrollViewRef}
                 contentContainerStyle={[
                     {
@@ -318,7 +320,7 @@ export function ObservationsScreen({ route }: ObservationsScreenProps) {
                         </>
                     </>
                 )}
-            </ScrollView>
+            </KeyboardAwareScrollView>
         </View>
     );
 }

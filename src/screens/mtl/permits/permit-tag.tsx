@@ -1,8 +1,7 @@
 import * as React from "react";
 import { View, StyleSheet } from "react-native";
-import PermitTagIcon from "~/assets/icons/other/permit-tag.svg";
+import { OtherPermitTagIcon } from "~/components/icons/other-permit-tag-icon";
 import { Text } from "~/components/text";
-import { theme } from "~/theme";
 
 type PermitTagProps = {
     count: number;
@@ -15,11 +14,7 @@ export function PermitTag({ variant, count }: PermitTagProps) {
             <Text size={12} style={styles.text} color={"white"} weight="bold">
                 {count}
             </Text>
-            <PermitTagIcon
-                fill={variant === "available" ? theme.color.success : theme.color.gray3}
-                width={40}
-                height={24}
-            />
+            <OtherPermitTagIcon color={variant === "available" ? "success" : "gray3"} width={40} height={24} />
         </View>
     );
 }

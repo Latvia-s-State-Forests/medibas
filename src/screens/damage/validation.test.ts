@@ -196,6 +196,200 @@ describe("getLandDamageValidationErrors", () => {
         );
         expect(errors).toEqual(['"Skaits" ir obligāti aizpildāms lauks']);
     });
+
+    it("returns an error for invalid area number format", () => {
+        const errors = getLandDamageValidationErrors(
+            {
+                ...validLandDamageState,
+                type: AgriculturalLandTypeId.Cropping,
+                area: "invalid_number",
+            },
+            classifiers
+        );
+        expect(errors).toEqual(['"Izpostītā platība (ha)" ievadīts nederīgs skaitlis']);
+    });
+
+    it("returns an error for area with multiple decimal separators", () => {
+        const errors = getLandDamageValidationErrors(
+            {
+                ...validLandDamageState,
+                type: AgriculturalLandTypeId.Cropping,
+                area: "1.2.3",
+            },
+            classifiers
+        );
+        expect(errors).toEqual(['"Izpostītā platība (ha)" ievadīts nederīgs skaitlis']);
+    });
+
+    it("returns an error for area with non-numeric characters", () => {
+        const errors = getLandDamageValidationErrors(
+            {
+                ...validLandDamageState,
+                type: AgriculturalLandTypeId.Cropping,
+                area: "12abc",
+            },
+            classifiers
+        );
+        expect(errors).toEqual(['"Izpostītā platība (ha)" ievadīts nederīgs skaitlis']);
+    });
+
+    it("returns no error for valid area formats", () => {
+        const testCases = ["1.5", "1,5", "123", "0.001", "+123.45", "-5.5"];
+
+        testCases.forEach((area) => {
+            const errors = getLandDamageValidationErrors(
+                {
+                    ...validLandDamageState,
+                    type: AgriculturalLandTypeId.Cropping,
+                    area,
+                },
+                classifiers
+            );
+            expect(errors).toEqual([]);
+        });
+    });
+
+    it("does not require area when type is countable (livestock)", () => {
+        const errors = getLandDamageValidationErrors(
+            {
+                ...validLandDamageState,
+                type: AgriculturalLandTypeId.Livestock,
+                area: "",
+            },
+            classifiers
+        );
+        expect(errors).toEqual([]);
+    });
+
+    it("does not require area when type is countable (beekeeping)", () => {
+        const errors = getLandDamageValidationErrors(
+            {
+                ...validLandDamageState,
+                type: AgriculturalLandTypeId.Beekeeping,
+                area: "",
+            },
+            classifiers
+        );
+        expect(errors).toEqual([]);
+    });
+
+    it("does not require area when type is countable (poultry)", () => {
+        const errors = getLandDamageValidationErrors(
+            {
+                ...validLandDamageState,
+                type: AgriculturalLandTypeId.Poultry,
+                area: "",
+            },
+            classifiers
+        );
+        expect(errors).toEqual([]);
+    });
+
+    it("does not require count when type is not countable (cropping)", () => {
+        const errors = getLandDamageValidationErrors(
+            {
+                ...validLandDamageState,
+                type: AgriculturalLandTypeId.Cropping,
+                count: 0,
+            },
+            classifiers
+        );
+        expect(errors).toEqual([]);
+    });
+
+    it("does not require area when other type with countable subtype is selected", () => {
+        const errors = getLandDamageValidationErrors(
+            {
+                ...validLandDamageState,
+                type: AgriculturalLandTypeId.Other,
+                subtype: AgriculturalLandTypeId.Livestock,
+                area: "",
+            },
+            classifiers
+        );
+        expect(errors).toEqual([]);
+    });
+
+    it("requires area when other type with non-countable subtype is selected", () => {
+        const errors = getLandDamageValidationErrors(
+            {
+                ...validLandDamageState,
+                type: AgriculturalLandTypeId.Other,
+                subtype: AgriculturalLandTypeId.Cropping,
+                area: "",
+            },
+            classifiers
+        );
+        expect(errors).toEqual(['"Izpostītā platība (ha)" ir obligāti aizpildāms lauks']);
+    });
+
+    it("does not require species when other type and other subtype are selected but customSpecies is provided", () => {
+        const errors = getLandDamageValidationErrors(
+            {
+                ...validLandDamageState,
+                type: AgriculturalLandTypeId.Other,
+                subtype: AgriculturalLandTypeId.Other,
+                species: undefined,
+                customSpecies: "Custom species name",
+            },
+            classifiers
+        );
+        expect(errors).toEqual([]);
+    });
+
+    it("requires species when other type is selected but subtype is not Other", () => {
+        const errors = getLandDamageValidationErrors(
+            {
+                ...validLandDamageState,
+                type: AgriculturalLandTypeId.Other,
+                subtype: AgriculturalLandTypeId.Livestock,
+                species: undefined,
+            },
+            classifiers
+        );
+        expect(errors).toEqual(['"Suga" ir obligāti aizpildāms lauks']);
+    });
+
+    it("returns error when other type is selected and subtype is Other but customSpecies is empty", () => {
+        const errors = getLandDamageValidationErrors(
+            {
+                ...validLandDamageState,
+                type: AgriculturalLandTypeId.Other,
+                subtype: AgriculturalLandTypeId.Other,
+                customSpecies: "",
+                species: undefined,
+            },
+            classifiers
+        );
+        expect(errors).toEqual(['"Suga" ir obligāti aizpildāms lauks']);
+    });
+
+    it("returns multiple errors when multiple fields are missing for other type", () => {
+        const errors = getLandDamageValidationErrors(
+            {
+                ...validLandDamageState,
+                type: AgriculturalLandTypeId.Other,
+                subtype: undefined,
+                species: undefined,
+                customSpecies: "",
+            },
+            classifiers
+        );
+        expect(errors).toEqual(['"LIZ apakštips" ir obligāti aizpildāms lauks']);
+    });
+
+    it("requires count when other type with countable subtype is selected", () => {
+        const errors = getLandDamageValidationErrors(
+            {
+                ...validLandDamageState,
+                type: AgriculturalLandTypeId.Other,
+                subtype: AgriculturalLandTypeId.Livestock,
+                count: 0,
+            },
+            classifiers
+        );
+        expect(errors).toEqual(['"Skaits" ir obligāti aizpildāms lauks']);
+    });
 });
 
 describe("getForestDamageValidationErrors", () => {
@@ -233,6 +427,24 @@ describe("getForestDamageValidationErrors", () => {
         expect(errors).toEqual(['"Cita suga" ir obligāti aizpildāms lauks']);
     });
 
+    it("returns an error for missing otherDamagedTreeSpecies when zero", () => {
+        const errors = getForestDamageValidationErrors({
+            ...validForestDamageState,
+            damagedTreeSpecies: { [TreeSpeciesId.Other]: true },
+            otherDamagedTreeSpecies: 0,
+        });
+        expect(errors).toEqual(['"Cita suga" ir obligāti aizpildāms lauks']);
+    });
+
+    it("returns no error when otherDamagedTreeSpecies is set to valid number", () => {
+        const errors = getForestDamageValidationErrors({
+            ...validForestDamageState,
+            damagedTreeSpecies: { [TreeSpeciesId.Other]: true },
+            otherDamagedTreeSpecies: 5,
+        });
+        expect(errors).toEqual([]);
+    });
+
     it("returns an error for missing responsibleSpecies", () => {
         const errors = getForestDamageValidationErrors({ ...validForestDamageState, responsibleSpecies: undefined });
         expect(errors).toEqual(['"Bojājumus nodarījušā dzīvnieku suga" ir obligāti aizpildāms lauks']);
@@ -250,6 +462,30 @@ describe("getForestDamageValidationErrors", () => {
     it("returns an error for missing damageTypes", () => {
         const errors = getForestDamageValidationErrors({ ...validForestDamageState, damageTypes: {} });
         expect(errors).toEqual(['"Bojājuma veids" ir obligāti aizpildāms lauks']);
+    });
+
+    it("returns an error for invalid area number format", () => {
+        const errors = getForestDamageValidationErrors({ ...validForestDamageState, area: "invalid_number" });
+        expect(errors).toEqual(['"Aptuveni bojāta platība (ha)" ievadīts nederīgs skaitlis']);
+    });
+
+    it("returns an error for area with multiple decimal separators", () => {
+        const errors = getForestDamageValidationErrors({ ...validForestDamageState, area: "1.2.3" });
+        expect(errors).toEqual(['"Aptuveni bojāta platība (ha)" ievadīts nederīgs skaitlis']);
+    });
+
+    it("returns an error for area with non-numeric characters", () => {
+        const errors = getForestDamageValidationErrors({ ...validForestDamageState, area: "12abc" });
+        expect(errors).toEqual(['"Aptuveni bojāta platība (ha)" ievadīts nederīgs skaitlis']);
+    });
+
+    it("returns no error for valid area formats", () => {
+        const testCases = ["1.5", "1,5", "123", "0.001", "+123.45", "-5.5"];
+
+        testCases.forEach((area) => {
+            const errors = getForestDamageValidationErrors({ ...validForestDamageState, area });
+            expect(errors).toEqual([]);
+        });
     });
 });
 

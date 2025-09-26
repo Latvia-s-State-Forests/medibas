@@ -363,6 +363,7 @@ export enum HuntingInfrastructureTypeId {
     Bridge = 3,
     Footbridge = 4,
     ShootingLane = 5,
+    Other = 7,
 }
 
 export enum AgriculturalLandTypeId {

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { match } from "ts-pattern";
-import { ActorRefFrom, assign, createMachine } from "xstate";
+import { ActorRefFrom, assign, fromCallback, setup } from "xstate";
 import { api } from "~/api";
 import { Button } from "~/components/button";
 import { Dialog } from "~/components/dialog";
@@ -13,10 +13,10 @@ import { NetworkStatusEvent, networkStatusMachine } from "~/utils/network-status
 import { formatMemberLabel } from "./format-member-label";
 
 type DeleteMemberStatusDialogProps = {
-    service: ActorRefFrom<typeof deleteMemberMachine>;
+    actor: ActorRefFrom<typeof deleteMemberMachine>;
 };
 
-export function DeleteMemberStatusDialog({ service }: DeleteMemberStatusDialogProps) {
+export function DeleteMemberStatusDialog({ actor }: DeleteMemberStatusDialogProps) {
     const { t } = useTranslation();
     const [visible, setVisible] = React.useState(false);
     const [status, setStatus] = React.useState<
@@ -24,16 +24,7 @@ export function DeleteMemberStatusDialog({ service }: DeleteMemberStatusDialogPr
     >("loading");
 
     React.useEffect(() => {
-        const subscription = service.subscribe((state) => {
-            const message = "DM " + JSON.stringify(state.value) + " " + JSON.stringify(state.event);
-            logger.log(message);
-        });
-
-        return () => subscription.unsubscribe();
-    }, [service]);
-
-    React.useEffect(() => {
-        const subscription = service.subscribe((state) => {
+        const subscription = actor.subscribe((state) => {
             if (state.matches("confirmingDeleteFromSingleDistrict")) {
                 setVisible(true);
                 setStatus("confirming");
@@ -59,11 +50,11 @@ export function DeleteMemberStatusDialog({ service }: DeleteMemberStatusDialogPr
         });
 
         return () => subscription.unsubscribe();
-    }, [service]);
+    }, [actor]);
 
     return match(status)
         .with("confirming", () => {
-            const context = service.getSnapshot()?.context;
+            const context = actor.getSnapshot()?.context;
             const member = context?.member
                 ? formatMemberLabel(context.member.cardNumber, context.member.firstName, context.member.lastName)
                 : "";
@@ -78,16 +69,16 @@ export function DeleteMemberStatusDialog({ service }: DeleteMemberStatusDialogPr
                             <Button
                                 variant="danger"
                                 title={t("mtl.deleteMember.confirming.delete")}
-                                onPress={() => service.send("CONFIRM")}
+                                onPress={() => actor.send({ type: "CONFIRM" })}
                             />
                             <Button
                                 variant="secondary-outlined"
                                 title={t("mtl.deleteMember.confirming.cancel")}
-                                onPress={() => service.send("CANCEL")}
+                                onPress={() => actor.send({ type: "CANCEL" })}
                             />
                         </>
                     }
-                    onBackButtonPress={() => service.send("CANCEL")}
+                    onBackButtonPress={() => actor.send({ type: "CANCEL" })}
                 />
             );
         })
@@ -100,7 +91,10 @@ export function DeleteMemberStatusDialog({ service }: DeleteMemberStatusDialogPr
                 icon="success"
                 title={t("mtl.deleteMember.success.title")}
                 buttons={
-                    <Button title={t("mtl.deleteMember.success.continue")} onPress={() => service.send("RESET")} />
+                    <Button
+                        title={t("mtl.deleteMember.success.continue")}
+                        onPress={() => actor.send({ type: "RESET" })}
+                    />
                 }
             />
         ))
@@ -114,16 +108,16 @@ export function DeleteMemberStatusDialog({ service }: DeleteMemberStatusDialogPr
                     <>
                         <Button
                             title={t("mtl.deleteMember.networkFailure.retry")}
-                            onPress={() => service.send("RETRY")}
+                            onPress={() => actor.send({ type: "RETRY" })}
                         />
                         <Button
                             variant="secondary-outlined"
                             title={t("mtl.deleteMember.networkFailure.cancel")}
-                            onPress={() => service.send("CANCEL")}
+                            onPress={() => actor.send({ type: "CANCEL" })}
                         />
                     </>
                 }
-                onBackButtonPress={() => service.send("CANCEL")}
+                onBackButtonPress={() => actor.send({ type: "CANCEL" })}
             />
         ))
         .with("otherFailure", () => (
@@ -135,167 +129,183 @@ export function DeleteMemberStatusDialog({ service }: DeleteMemberStatusDialogPr
                     <>
                         <Button
                             title={t("mtl.deleteMember.otherFailure.retry")}
-                            onPress={() => service.send("RETRY")}
+                            onPress={() => actor.send({ type: "RETRY" })}
                         />
                         <Button
                             variant="secondary-outlined"
                             title={t("mtl.deleteMember.otherFailure.cancel")}
-                            onPress={() => service.send("CANCEL")}
+                            onPress={() => actor.send({ type: "CANCEL" })}
                         />
                     </>
                 }
-                onBackButtonPress={() => service.send("CANCEL")}
+                onBackButtonPress={() => actor.send({ type: "CANCEL" })}
             />
         ))
         .exhaustive();
 }
 
-export const deleteMemberMachine = createMachine(
-    {
-        id: "deleteMember",
-        schema: {
-            events: {} as
-                | { type: "DELETE_FROM_SINGLE_DISTRICT"; member: Member; district: { id: number; name: string } }
-                | {
-                      type: "DELETE_FROM_MULTIPLE_DISTRICTS";
-                      member: Member;
-                      districts: Array<{ id: number; name: string }>;
-                  }
-                | { type: "DELETE_SUCCESS" }
-                | { type: "DELETE_FAILURE" }
-                | { type: "UPDATE_MEMBERSHIPS_SUCCESS" }
-                | { type: "UPDATE_MEMBERSHIPS_FAILURE" }
-                | { type: "CONFIRM" }
-                | { type: "RETRY" }
-                | { type: "CANCEL" }
-                | { type: "RESET" }
-                | NetworkStatusEvent,
-            context: {} as { member?: Member; districts?: Array<{ id: number; name: string }> },
-        },
-        initial: "idle",
-        states: {
-            idle: {
-                on: {
-                    DELETE_FROM_SINGLE_DISTRICT: {
-                        target: "confirmingDeleteFromSingleDistrict",
-                        actions: ["setMemberAndDistricts"],
-                    },
-                    DELETE_FROM_MULTIPLE_DISTRICTS: {
-                        target: "verifyingNetworkConnection",
-                        actions: ["setMemberAndDistricts"],
-                    },
-                },
-            },
+type DeleteMemberEvent =
+    | { type: "DELETE_FROM_SINGLE_DISTRICT"; member: Member; district: { id: number; name: string } }
+    | {
+          type: "DELETE_FROM_MULTIPLE_DISTRICTS";
+          member: Member;
+          districts: Array<{ id: number; name: string }>;
+      }
+    | { type: "DELETE_SUCCESS" }
+    | { type: "DELETE_FAILURE" }
+    | { type: "UPDATE_MEMBERSHIPS_SUCCESS" }
+    | { type: "UPDATE_MEMBERSHIPS_FAILURE" }
+    | { type: "CONFIRM" }
+    | { type: "RETRY" }
+    | { type: "CANCEL" }
+    | { type: "RESET" }
+    | NetworkStatusEvent;
 
-            confirmingDeleteFromSingleDistrict: {
-                on: {
-                    CONFIRM: { target: "verifyingNetworkConnection" },
-                    CANCEL: { target: "idle", actions: ["resetMemberAndDistricts"] },
-                },
-            },
-
-            verifyingNetworkConnection: {
-                invoke: { src: networkStatusMachine },
-                on: {
-                    NETWORK_AVAILABLE: { target: "deletingMember" },
-                    NETWORK_UNAVAILABLE: { target: "networkFailure" },
-                },
-            },
-
-            deletingMember: {
-                invoke: { src: "deleteMember" },
-                on: {
-                    DELETE_SUCCESS: { target: "updatingMemberships" },
-                    DELETE_FAILURE: { target: "otherFailure" },
-                },
-            },
-
-            updatingMemberships: {
-                invoke: { src: "updateMemberships" },
-                on: {
-                    UPDATE_MEMBERSHIPS_SUCCESS: { target: "success" },
-                    UPDATE_MEMBERSHIPS_FAILURE: { target: "otherFailure" },
-                },
-            },
-
-            success: {
-                on: {
-                    RESET: { target: "idle", actions: ["resetMemberAndDistricts", "onDeleteSuccess"] },
-                },
-            },
-
-            networkFailure: {
-                on: {
-                    RETRY: { target: "verifyingNetworkConnection" },
-                    CANCEL: { target: "idle", actions: ["resetMemberAndDistricts"] },
-                },
-            },
-
-            otherFailure: {
-                on: {
-                    RETRY: { target: "verifyingNetworkConnection" },
-                    CANCEL: { target: "idle", actions: ["resetMemberAndDistricts"] },
-                },
-            },
-        },
-        preserveActionOrder: true,
-        predictableActionArguments: true,
+export const deleteMemberMachine = setup({
+    types: {
+        events: {} as DeleteMemberEvent,
+        context: {} as { member?: Member; districts?: Array<{ id: number; name: string }> },
     },
-    {
-        actions: {
-            setMemberAndDistricts: assign((context, event) => {
-                if (event.type === "DELETE_FROM_SINGLE_DISTRICT") {
-                    return {
-                        member: event.member,
-                        districts: [event.district],
-                    };
-                }
+    actions: {
+        setMemberAndDistricts: assign(({ context, event }) => {
+            if (event.type === "DELETE_FROM_SINGLE_DISTRICT") {
+                return {
+                    member: event.member,
+                    districts: [event.district],
+                };
+            }
 
-                if (event.type === "DELETE_FROM_MULTIPLE_DISTRICTS") {
-                    return {
-                        member: event.member,
-                        districts: event.districts,
-                    };
-                }
+            if (event.type === "DELETE_FROM_MULTIPLE_DISTRICTS") {
+                return {
+                    member: event.member,
+                    districts: event.districts,
+                };
+            }
 
-                return context;
-            }),
-            resetMemberAndDistricts: assign({
-                member: undefined,
-                districts: undefined,
-            }),
-            onDeleteSuccess: () => {
-                // This should be overridden when necessary
-            },
+            return context;
+        }),
+        resetMemberAndDistricts: assign({
+            member: undefined,
+            districts: undefined,
+        }),
+        onDeleteSuccess: () => {
+            // This should be overridden when necessary
         },
-        services: {
-            deleteMember: (context) => async (send) => {
-                if (!context.member?.cardNumber || !context.districts) {
-                    logger.error("Failed to delete member, member and districts are missing", context);
-                    send({ type: "DELETE_FAILURE" });
+    },
+    actors: {
+        deleteMember: fromCallback(
+            ({
+                sendBack,
+                input,
+            }: {
+                sendBack: (event: DeleteMemberEvent) => void;
+                input: { cardNumber: string; districtIds: number[] } | null;
+            }) => {
+                if (!input) {
+                    logger.error("Failed to delete member, member and districts are missing");
+                    sendBack({ type: "DELETE_FAILURE" });
                     return;
                 }
 
-                try {
-                    await api.deleteMembership({
-                        cardNumber: context.member.cardNumber,
-                        removeFromDistrictIds: context.districts.map((d) => d.id),
+                api.deleteMembership({ cardNumber: input.cardNumber, removeFromDistrictIds: input.districtIds })
+                    .then(() => {
+                        sendBack({ type: "DELETE_SUCCESS" });
+                    })
+                    .catch((error) => {
+                        logger.error("Failed to delete member", error);
+                        sendBack({ type: "DELETE_FAILURE" });
                     });
-                    send({ type: "DELETE_SUCCESS" });
-                } catch (error) {
-                    logger.error("Failed to delete member", error);
-                    send({ type: "DELETE_FAILURE" });
-                }
-            },
-            updateMemberships: () => async (send) => {
-                try {
-                    await queryClient.refetchQueries(queryKeys.memberships, undefined, { throwOnError: true });
-                    send({ type: "UPDATE_MEMBERSHIPS_SUCCESS" });
-                } catch (error) {
+            }
+        ),
+        updateMemberships: fromCallback(({ sendBack }: { sendBack: (event: DeleteMemberEvent) => void }) => {
+            queryClient
+                .refetchQueries({ queryKey: queryKeys.memberships }, { throwOnError: true })
+                .then(() => {
+                    sendBack({ type: "UPDATE_MEMBERSHIPS_SUCCESS" });
+                })
+                .catch((error) => {
                     logger.error("Failed to update memberships", error);
-                    send({ type: "UPDATE_MEMBERSHIPS_FAILURE" });
-                }
+                    sendBack({ type: "UPDATE_MEMBERSHIPS_FAILURE" });
+                });
+        }),
+    },
+}).createMachine({
+    id: "deleteMember",
+    initial: "idle",
+    states: {
+        idle: {
+            on: {
+                DELETE_FROM_SINGLE_DISTRICT: {
+                    target: "confirmingDeleteFromSingleDistrict",
+                    actions: ["setMemberAndDistricts"],
+                },
+                DELETE_FROM_MULTIPLE_DISTRICTS: {
+                    target: "verifyingNetworkConnection",
+                    actions: ["setMemberAndDistricts"],
+                },
             },
         },
-    }
-);
+
+        confirmingDeleteFromSingleDistrict: {
+            on: {
+                CONFIRM: { target: "verifyingNetworkConnection" },
+                CANCEL: { target: "idle", actions: ["resetMemberAndDistricts"] },
+            },
+        },
+
+        verifyingNetworkConnection: {
+            invoke: { src: networkStatusMachine },
+            on: {
+                NETWORK_AVAILABLE: { target: "deletingMember" },
+                NETWORK_UNAVAILABLE: { target: "networkFailure" },
+            },
+        },
+
+        deletingMember: {
+            invoke: {
+                src: "deleteMember",
+                input: ({ context }) => {
+                    if (context.member?.cardNumber && context.districts) {
+                        return {
+                            cardNumber: context.member.cardNumber,
+                            districtIds: context.districts.map((district) => district.id),
+                        };
+                    }
+                    return null;
+                },
+            },
+            on: {
+                DELETE_SUCCESS: { target: "updatingMemberships" },
+                DELETE_FAILURE: { target: "otherFailure" },
+            },
+        },
+
+        updatingMemberships: {
+            invoke: { src: "updateMemberships" },
+            on: {
+                UPDATE_MEMBERSHIPS_SUCCESS: { target: "success" },
+                UPDATE_MEMBERSHIPS_FAILURE: { target: "otherFailure" },
+            },
+        },
+
+        success: {
+            on: {
+                RESET: { target: "idle", actions: ["resetMemberAndDistricts", "onDeleteSuccess"] },
+            },
+        },
+
+        networkFailure: {
+            on: {
+                RETRY: { target: "verifyingNetworkConnection" },
+                CANCEL: { target: "idle", actions: ["resetMemberAndDistricts"] },
+            },
+        },
+
+        otherFailure: {
+            on: {
+                RETRY: { target: "verifyingNetworkConnection" },
+                CANCEL: { target: "idle", actions: ["resetMemberAndDistricts"] },
+            },
+        },
+    },
+});

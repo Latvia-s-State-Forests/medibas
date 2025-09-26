@@ -9,6 +9,8 @@ import { Spacer } from "~/components/spacer";
 import { Text } from "~/components/text";
 import { theme } from "~/theme";
 
+export const HEADER_HEIGHT = 56;
+
 type HeaderProps = {
     title: string;
     showBackButton?: boolean;
@@ -140,7 +142,7 @@ const styles = StyleSheet.create({
     innerContainer: {
         flexDirection: "row",
         alignItems: "center",
-        height: 56,
+        height: HEADER_HEIGHT,
     },
     titleText: {
         flex: 1,

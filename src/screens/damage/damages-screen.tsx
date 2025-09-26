@@ -3,7 +3,8 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { randomUUID } from "expo-crypto";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "~/components/button";
 import { CurrentPosition, CurrentPositionHandle } from "~/components/current-position/current-position";
@@ -76,7 +77,7 @@ export function DamagesScreen(props: DamagesScreenProps) {
     const navigation = useNavigation();
     const reports = useReportsContext();
     const userStorage = useUserStorage();
-    const scrollViewRef = React.useRef<ScrollView>(null);
+    const scrollViewRef = React.useRef<React.ComponentRef<typeof KeyboardAwareScrollView>>(null);
 
     React.useEffect(() => {
         if (props.route.params?.initialState) {
@@ -170,7 +171,8 @@ export function DamagesScreen(props: DamagesScreenProps) {
     return (
         <View style={styles.container}>
             <Header title={t("damage.title")} showBackButton={false} />
-            <ScrollView
+            <KeyboardAwareScrollView
+                bottomOffset={Platform.select({ ios: 24, android: 48 })}
                 ref={scrollViewRef}
                 contentContainerStyle={[
                     styles.body,
@@ -241,7 +243,7 @@ export function DamagesScreen(props: DamagesScreenProps) {
                         />
                     </>
                 )}
-            </ScrollView>
+            </KeyboardAwareScrollView>
         </View>
     );
 }

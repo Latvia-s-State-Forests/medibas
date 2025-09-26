@@ -17,7 +17,8 @@ import { getAppLanguage } from "~/i18n";
 import { queryClient, queryKeys } from "~/query-client";
 import { theme } from "~/theme";
 import { Hunt, HuntEventStatus, HuntEventType, HuntPlace } from "~/types/hunts";
-import { formatDate } from "~/utils/format-date-time";
+import { formatHuntDate } from "~/utils/format-date-time";
+import { useGetHuntPlaceName } from "~/utils/get-hunt-place-name";
 import { sortHuntsByDate } from "~/utils/sort-hunts-by-date";
 
 type HuntWithTitle = Hunt & {
@@ -40,29 +41,12 @@ export function IndividualHuntListScreen() {
     useFocusEffect(
         React.useCallback(() => {
             InteractionManager.runAfterInteractions(() => {
-                queryClient.invalidateQueries(queryKeys.hunts);
+                queryClient.invalidateQueries({ queryKey: queryKeys.hunts });
             });
         }, [])
     );
 
-    const getPlaceName = React.useCallback(
-        (placeId: HuntPlace | undefined) => {
-            if (placeId === undefined) {
-                return "";
-            }
-
-            const HUNT_PLACE_ID: {
-                [key in HuntPlace]: string;
-            } = {
-                1: t("hunt.individualHunt.inTheStation"),
-                2: t("hunt.individualHunt.waterBody"),
-                3: t("hunt.individualHunt.outSideStation"),
-            };
-
-            return HUNT_PLACE_ID[placeId];
-        },
-        [t]
-    );
+    const getPlaceName = useGetHuntPlaceName();
 
     function onNavigateToIndividualHunt() {
         navigation.navigate("IndividualHuntFormScreen", {});
@@ -165,12 +149,6 @@ export function IndividualHuntListScreen() {
 
         return hunts;
     }, [allHunts, classifiers.animalSpecies.options, getPlaceName, language]);
-
-    function formatHuntDate(plannedFrom?: string, plannedTo?: string) {
-        const dateFrom = formatDate(plannedFrom ?? "");
-        const dateTo = formatDate(plannedTo ?? "");
-        return dateFrom !== dateTo ? `${dateFrom} - ${dateTo}` : dateFrom;
-    }
 
     return (
         <View style={styles.container}>

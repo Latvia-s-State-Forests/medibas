@@ -1,7 +1,7 @@
-import { useInterpret, useSelector } from "@xstate/react";
+import { useActorRef, useSelector } from "@xstate/react";
 import { randomUUID } from "expo-crypto";
 import * as React from "react";
-import { ActorRefFrom, assign, createMachine } from "xstate";
+import { ActorRefFrom, and, assign, fromCallback, setup, stateIn } from "xstate";
 import { api } from "~/api";
 import { logger } from "~/logger";
 import { useUserStorage } from "~/machines/authentication-machine";
@@ -15,151 +15,104 @@ import {
 import { formatDateTimeToISO } from "~/utils/format-date-time";
 import { NetworkStatusEvent, networkStatusMachine } from "~/utils/network-status-machine";
 
-const huntActivitiesMachine = createMachine(
-    {
-        id: "huntActivities",
-        schema: {
-            context: {} as { activities: HuntActivity[] },
-            events: {} as
-                | NetworkStatusEvent
-                | { type: "ADD_ACTIVITY"; activity: HuntActivity }
-                | { type: "ADD_ACTIVITIES"; activities: HuntActivity[] }
-                | { type: "ACTIVITY_STATUS_CHANGED"; guid: string; status: HuntActivity["status"]; sentDate?: string }
-                | { type: "SYNC_SUCCESS" }
-                | { type: "SYNC_FAILURE" }
-                | { type: "RETRY_ACTIVITY"; guid: string },
-        },
-        context: {
-            activities: [],
-        },
-        type: "parallel",
-        states: {
-            activities: {
-                initial: "idle",
-                on: {
-                    ADD_ACTIVITY: {
-                        actions: ["addActivity", "saveActivities"],
-                    },
-                    ADD_ACTIVITIES: {
-                        actions: ["addActivities", "saveActivities"],
-                    },
-                    RETRY_ACTIVITY: {
-                        actions: ["retryActivity"],
-                    },
-                },
-                states: {
-                    idle: {
-                        always: { target: "syncing", cond: "isSyncPending" },
-                    },
-                    syncing: {
-                        invoke: { src: "syncActivities" },
-                        on: {
-                            ACTIVITY_STATUS_CHANGED: {
-                                actions: ["updateActivityStatus", "saveActivities"],
-                            },
-                            SYNC_SUCCESS: { target: "idle" },
-                            SYNC_FAILURE: { target: "idle" },
-                        },
-                    },
-                },
-            },
-            network: {
-                invoke: { src: networkStatusMachine },
-                initial: "loading",
-                states: {
-                    loading: {
-                        on: {
-                            NETWORK_AVAILABLE: { target: "online" },
-                            NETWORK_UNAVAILABLE: { target: "offline" },
-                        },
-                    },
-                    online: {
-                        on: {
-                            NETWORK_UNAVAILABLE: { target: "offline" },
-                        },
-                    },
-                    offline: {
-                        on: {
-                            NETWORK_AVAILABLE: { target: "online" },
-                        },
-                    },
-                },
-            },
-        },
-        preserveActionOrder: true,
-        predictableActionArguments: true,
+type HuntActivitiesEvent =
+    | NetworkStatusEvent
+    | { type: "ADD_ACTIVITY"; activity: HuntActivity }
+    | { type: "ADD_ACTIVITIES"; activities: HuntActivity[] }
+    | { type: "ACTIVITY_STATUS_CHANGED"; guid: string; status: HuntActivity["status"]; sentDate?: string }
+    | { type: "SYNC_SUCCESS" }
+    | { type: "SYNC_FAILURE" }
+    | { type: "RETRY_ACTIVITY"; guid: string };
+
+const huntActivitiesMachine = setup({
+    types: {
+        context: {} as { activities: HuntActivity[] },
+        events: {} as HuntActivitiesEvent,
     },
-    {
-        actions: {
-            addActivity: assign({
-                activities: (context, event) => {
-                    if (event.type === "ADD_ACTIVITY") {
-                        return context.activities.concat(event.activity);
-                    }
-                    return context.activities;
-                },
-            }),
-            addActivities: assign({
-                activities: (context, event) => {
-                    if (event.type === "ADD_ACTIVITIES") {
-                        return context.activities.concat(event.activities);
-                    }
-                    return context.activities;
-                },
-            }),
-            updateActivityStatus: assign({
-                activities: (context, event) => {
-                    if (event.type === "ACTIVITY_STATUS_CHANGED") {
-                        return context.activities.map((activity) => {
-                            if (activity.guid === event.guid) {
-                                return {
-                                    ...activity,
-                                    status: event.status,
-                                    ...(event.sentDate && { sentDate: event.sentDate }),
-                                };
-                            }
-                            return activity;
-                        });
-                    }
-                    return context.activities;
-                },
-            }),
-            retryActivity: assign({
-                activities: (context, event) => {
-                    if (event.type === "RETRY_ACTIVITY") {
-                        return context.activities.map((activity) => {
-                            if (activity.guid === event.guid) {
-                                const updatedActivity: HuntActivity = { ...activity, status: "pending" };
-                                return updatedActivity;
-                            }
-                            return activity;
-                        });
-                    }
-                    return context.activities;
-                },
-            }),
-        },
-        guards: {
-            isSyncPending: (context, event, meta) => {
-                const online = meta.state.matches("network.online");
-                if (!online) {
-                    return false;
+    actions: {
+        addActivity: assign({
+            activities: ({ context, event }) => {
+                if (event.type === "ADD_ACTIVITY") {
+                    return context.activities.concat(event.activity);
                 }
-                const requests = getHuntActivitiesRequests(context.activities);
-                return requests.length > 0;
+                return context.activities;
             },
+        }),
+        addActivities: assign({
+            activities: ({ context, event }) => {
+                if (event.type === "ADD_ACTIVITIES") {
+                    return context.activities.concat(event.activities);
+                }
+                return context.activities;
+            },
+        }),
+        updateActivityStatus: assign({
+            activities: ({ context, event }) => {
+                if (event.type === "ACTIVITY_STATUS_CHANGED") {
+                    return context.activities.map((activity) => {
+                        if (activity.guid === event.guid) {
+                            return {
+                                ...activity,
+                                status: event.status,
+                                ...(event.sentDate && { sentDate: event.sentDate }),
+                            };
+                        }
+                        return activity;
+                    });
+                }
+                return context.activities;
+            },
+        }),
+        retryActivity: assign({
+            activities: ({ context, event }) => {
+                if (event.type === "RETRY_ACTIVITY") {
+                    return context.activities.map((activity) => {
+                        if (activity.guid === event.guid) {
+                            const updatedActivity: HuntActivity = { ...activity, status: "pending" };
+                            return updatedActivity;
+                        }
+                        return activity;
+                    });
+                }
+                return context.activities;
+            },
+        }),
+        saveActivities: () => {
+            // handled externally
         },
-        services: {
-            syncActivities: (context) => (send) => {
+    },
+    guards: {
+        isSyncPending: ({ context }) => {
+            const requests = getHuntActivitiesRequests(context.activities);
+            return requests.length > 0;
+        },
+    },
+    actors: {
+        syncActivities: fromCallback(
+            ({
+                sendBack,
+                input,
+            }: {
+                sendBack: (event: HuntActivitiesEvent) => void;
+                input?: { activities: HuntActivity[] };
+            }) => {
+                const activities = input?.activities;
+
+                if (!activities) {
+                    logger.error("Failed to sync activities, missing input activities");
+                    sendBack({ type: "SYNC_FAILURE" });
+                    return;
+                }
+
                 let ignore = false;
 
-                async function sync() {
+                async function sync(activities: HuntActivity[]) {
                     let success = true;
-                    const requests = getHuntActivitiesRequests(context.activities);
+                    const requests = getHuntActivitiesRequests(activities);
                     for (const request of requests) {
                         try {
                             for (const activity of request.activities) {
-                                send({ type: "ACTIVITY_STATUS_CHANGED", guid: activity.guid, status: "active" });
+                                sendBack({ type: "ACTIVITY_STATUS_CHANGED", guid: activity.guid, status: "active" });
                             }
 
                             logger.log("Before activities request", request);
@@ -167,7 +120,7 @@ const huntActivitiesMachine = createMachine(
                             logger.log("After activities request", request);
 
                             for (const activity of request.activities) {
-                                send({
+                                sendBack({
                                     type: "ACTIVITY_STATUS_CHANGED",
                                     guid: activity.guid,
                                     status: "success",
@@ -177,7 +130,7 @@ const huntActivitiesMachine = createMachine(
                         } catch (error) {
                             logger.error("Activities request failed", request, error);
                             for (const activity of request.activities) {
-                                send({ type: "ACTIVITY_STATUS_CHANGED", guid: activity.guid, status: "failure" });
+                                sendBack({ type: "ACTIVITY_STATUS_CHANGED", guid: activity.guid, status: "failure" });
                             }
                             success = false;
                         }
@@ -185,17 +138,17 @@ const huntActivitiesMachine = createMachine(
                     return success;
                 }
 
-                sync()
+                sync(activities)
                     .then((success) => {
                         if (ignore) {
                             return;
                         }
                         if (success) {
                             logger.log("Synced activities with success");
-                            send({ type: "SYNC_SUCCESS" });
+                            sendBack({ type: "SYNC_SUCCESS" });
                         } else {
                             logger.log("Synced activities with failure");
-                            send({ type: "SYNC_FAILURE" });
+                            sendBack({ type: "SYNC_FAILURE" });
                         }
                     })
                     .catch((error) => {
@@ -203,16 +156,80 @@ const huntActivitiesMachine = createMachine(
                             return;
                         }
                         logger.error("Failed to sync activities", error);
-                        send({ type: "SYNC_FAILURE" });
+                        sendBack({ type: "SYNC_FAILURE" });
                     });
 
                 return () => {
                     ignore = true;
                 };
+            }
+        ),
+    },
+}).createMachine({
+    id: "huntActivities",
+    context: {
+        activities: [],
+    },
+    type: "parallel",
+    states: {
+        activities: {
+            initial: "idle",
+            on: {
+                ADD_ACTIVITY: {
+                    actions: ["addActivity", "saveActivities"],
+                },
+                ADD_ACTIVITIES: {
+                    actions: ["addActivities", "saveActivities"],
+                },
+                RETRY_ACTIVITY: {
+                    actions: ["retryActivity"],
+                },
+            },
+            states: {
+                idle: {
+                    always: { target: "syncing", guard: and([stateIn({ network: "online" }), "isSyncPending"]) },
+                },
+                syncing: {
+                    invoke: {
+                        src: "syncActivities",
+                        input: ({ context }) => {
+                            return { activities: context.activities };
+                        },
+                    },
+                    on: {
+                        ACTIVITY_STATUS_CHANGED: {
+                            actions: ["updateActivityStatus", "saveActivities"],
+                        },
+                        SYNC_SUCCESS: { target: "idle" },
+                        SYNC_FAILURE: { target: "idle" },
+                    },
+                },
             },
         },
-    }
-);
+        network: {
+            invoke: { src: networkStatusMachine },
+            initial: "loading",
+            states: {
+                loading: {
+                    on: {
+                        NETWORK_AVAILABLE: { target: "online" },
+                        NETWORK_UNAVAILABLE: { target: "offline" },
+                    },
+                },
+                online: {
+                    on: {
+                        NETWORK_UNAVAILABLE: { target: "offline" },
+                    },
+                },
+                offline: {
+                    on: {
+                        NETWORK_AVAILABLE: { target: "online" },
+                    },
+                },
+            },
+        },
+    },
+});
 
 type HuntActivitiesContextValue = {
     actor: ActorRefFrom<typeof huntActivitiesMachine>;
@@ -225,29 +242,26 @@ const HuntActivitiesContext = React.createContext<HuntActivitiesContextValue | n
 
 export function HuntActivitiesProvider({ children }: { children: React.ReactNode }) {
     const userStorage = useUserStorage();
-    const actor = useInterpret(
-        () =>
-            huntActivitiesMachine.withContext({
-                activities: userStorage.getHuntActivities() ?? [],
-            }),
-        {
+
+    const actor = useActorRef(
+        huntActivitiesMachine.provide({
             actions: {
-                saveActivities: (context) => {
+                saveActivities: ({ context }) => {
                     userStorage.setHuntActivities(context.activities);
                 },
             },
+        }),
+        {
+            inspect: (inspectEvent) => {
+                if (inspectEvent.type === "@xstate.snapshot") {
+                    const snapshot = inspectEvent.actorRef?.getSnapshot();
+                    if (snapshot?.machine?.id === huntActivitiesMachine.id) {
+                        logger.log("HA " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event));
+                    }
+                }
+            },
         }
     );
-
-    React.useEffect(() => {
-        const subscription = actor.subscribe((state) => {
-            const message = "HA " + JSON.stringify(state.value) + " " + JSON.stringify(state.event);
-            logger.log(message);
-        });
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [actor]);
 
     function createActivity(simplifiedActivity: SimplifiedHuntActivity) {
         const activity: HuntActivity = {

@@ -1,7 +1,17 @@
 import { z } from "zod";
 
+export enum NewsNotificationType {
+    News = 1,
+    DrivenHuntCreated = 2,
+    IndividualHuntCreated = 3,
+    IndividualHuntViewed = 4,
+    IndividualHuntRejected = 5,
+}
+
 export const newsItemSchema = z.object({
     id: z.number(),
+    sourceId: z.number().optional(),
+    notificationTypeId: z.number(),
     startDate: z.string(),
     newsRecipientTypeId: z.number(),
     description: z.string(),

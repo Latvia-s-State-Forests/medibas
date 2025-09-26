@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Header } from "~/components/header";
-import { NavigationButton } from "~/components/navigation-button";
+import { NavigationButtonField } from "~/components/navigation-button-field";
 import { ReadOnlyField } from "~/components/read-only-field";
 import { useHunt } from "~/hooks/use-hunt";
 import { logger } from "~/logger";
@@ -78,20 +78,16 @@ function Content({ hunt }: ContentProps) {
                             latitude={hunt.meetingPointY}
                             longitude={hunt.meetingPointX}
                         />
-                        <View style={styles.navigation}>
-                            <ReadOnlyField
-                                label={t("hunt.drivenHunt.detailScreen.meetingPoint")}
-                                value={formatPosition({
-                                    latitude: hunt.meetingPointY,
-                                    longitude: hunt.meetingPointX,
-                                })}
-                            />
-                            <NavigationButton
-                                latitude={hunt.meetingPointY}
-                                longitude={hunt.meetingPointX}
-                                locationLabel={locationLabel}
-                            />
-                        </View>
+                        <NavigationButtonField
+                            label={t("hunt.individualHunt.locationCoordinates")}
+                            value={formatPosition({
+                                latitude: hunt.meetingPointY,
+                                longitude: hunt.meetingPointX,
+                            })}
+                            latitude={hunt.meetingPointY}
+                            longitude={hunt.meetingPointX}
+                            locationLabel={locationLabel}
+                        />
                     </>
                 ) : null}
                 <ReadOnlyField
@@ -128,10 +124,5 @@ const styles = StyleSheet.create({
     },
     time: {
         flex: 2,
-    },
-    navigation: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
     },
 });

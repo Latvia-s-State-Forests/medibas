@@ -2,20 +2,13 @@ import { z } from "zod";
 import { ErrorCode } from "../types/classifiers";
 import { FeatureLayer, ReportSyncError, ReportSyncResult } from "../types/report";
 
-export const postReportResponseSchema = z.tuple([
-    z.object({
-        id: z.number(),
-        reportId: z.number().optional(),
-        permitId: z.number().optional(),
-        strapNumber: z.string().optional(),
-        error: z
-            .object({
-                code: z.number(),
-                message: z.string(),
-            })
-            .optional(),
-    }),
-]);
+export const postReportResponseSchema = z.object({
+    reportId: z.number().optional(),
+    permitId: z.number().optional(),
+    strapNumber: z.string().optional(),
+    code: z.number().optional(),
+    message: z.string().optional(),
+});
 
 export type PostReportResponse = z.infer<typeof postReportResponseSchema>;
 
@@ -25,8 +18,13 @@ export function parsePostReportResponse(
     responseText: string | undefined,
     layer: FeatureLayer
 ): { success: true; result?: ReportSyncResult } | { success: false; error: ReportSyncError; reason?: string } {
-    if (status !== 200) {
-        return { success: false, error: { type: "other" }, reason: `Invalid status, expected: ${200}, got: ${status}` };
+    const expectedStatusCodes = [200, 400];
+    if (!expectedStatusCodes.includes(status)) {
+        return {
+            success: false,
+            error: { type: "other" },
+            reason: `Invalid status, expected ${expectedStatusCodes.join(" or ")}, got: ${status}`,
+        };
     }
 
     if (!contentType?.startsWith("application/json")) {
@@ -46,36 +44,28 @@ export function parsePostReportResponse(
     try {
         const rawResponse = JSON.parse(responseText);
         response = postReportResponseSchema.parse(rawResponse);
-    } catch (error) {
+    } catch {
         return { success: false, error: { type: "other" }, reason: "Failed to parse" };
     }
 
-    if (response[0].id !== layer) {
+    if (response.code && response.code !== ErrorCode.RequestAlreadyProcessed) {
         return {
             success: false,
-            error: { type: "other" },
-            reason: `Layer mismatch, expected: ${layer}, got: ${response[0].id}}`,
+            error: { type: "server", code: response.code, description: response.message },
         };
     }
 
-    if (response[0].error && response[0].error.code !== ErrorCode.RequestAlreadyProcessed) {
-        return {
-            success: false,
-            error: { type: "server", code: response[0].error.code, description: response[0].error.message },
-        };
-    }
-
-    if (response[0].id !== FeatureLayer.LimitedHuntReport) {
+    if (layer !== FeatureLayer.LimitedHuntReport) {
         return { success: true };
     }
 
-    if (response[0].reportId && response[0].permitId && response[0].strapNumber) {
+    if (response.reportId && response.permitId && response.strapNumber) {
         return {
             success: true,
             result: {
-                reportId: response[0].reportId,
-                permitId: response[0].permitId,
-                strapNumber: response[0].strapNumber,
+                reportId: response.reportId,
+                permitId: response.permitId,
+                strapNumber: response.strapNumber,
             },
         };
     }
@@ -83,6 +73,6 @@ export function parsePostReportResponse(
     return {
         success: false,
         error: { type: "other" },
-        reason: `Missing reportId, permitId or strapNumber, got: ${response[0].reportId}, ${response[0].permitId}, ${response[0].strapNumber}`,
+        reason: `Missing reportId, permitId or strapNumber, got: ${response.reportId}, ${response.permitId}, ${response.strapNumber}`,
     };
 }

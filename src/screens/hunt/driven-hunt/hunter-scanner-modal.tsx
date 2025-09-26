@@ -1,6 +1,7 @@
 import { Buffer } from "buffer";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
+import { match } from "ts-pattern";
 import { Button } from "~/components/button";
 import { QRScannerModal } from "~/components/qr-code/qr-scanner-modal";
 import { logger } from "~/logger";
@@ -27,7 +28,7 @@ export function HunterScannerModal(props: HunterScannerModalProps) {
 
     function onScanned(data: string) {
         const encodedData = Buffer.from(data, "base64").toString("utf-8");
-        if (confirmation || parseFailure || mismatchFailure) {
+        if (confirmation || parseFailure || cardFailure || duplicateFailure || mismatchFailure) {
             return;
         }
         try {
@@ -71,95 +72,111 @@ export function HunterScannerModal(props: HunterScannerModalProps) {
         }
     }
 
+    const showMessageModal = React.useMemo(
+        () => confirmation || parseFailure || cardFailure || duplicateFailure || mismatchFailure,
+        [confirmation, parseFailure, cardFailure, duplicateFailure, mismatchFailure]
+    );
+
     return (
         <QRScannerModal visible={props.visible} onScanned={onScanned} onClose={props.onReject}>
-            <MessageModal
-                visible={confirmation}
-                icon="hunt"
-                title={t("hunt.drivenHunt.hunterManagement.scanner.confirmation.title", {
-                    hunter: profile ? [profile.fn, profile.ln, profile.cn].join(" ") : "??",
-                })}
-                onBackButtonPress={() => {
-                    setConfirmation(false);
-                }}
-                buttons={
-                    <>
-                        <Button
-                            title={t("hunt.drivenHunt.hunterManagement.scanner.confirmation.confirm")}
-                            onPress={onConfirm}
-                        />
-                        <Button
-                            title={t("hunt.drivenHunt.hunterManagement.scanner.confirmation.reject")}
-                            onPress={() => {
-                                setConfirmation(false);
-                            }}
-                            variant="secondary-outlined"
-                        />
-                    </>
-                }
-            />
-            <MessageModal
-                visible={parseFailure}
-                icon="failure"
-                title={t("hunt.drivenHunt.hunterManagement.scanner.parseFailure.title")}
-                description={t("hunt.drivenHunt.hunterManagement.scanner.parseFailure.description")}
-                buttons={
-                    <Button
-                        title={t("hunt.drivenHunt.hunterManagement.scanner.parseFailure.button")}
-                        onPress={() => {
-                            setParseFailure(false);
-                        }}
+            {match({ confirmation, parseFailure, cardFailure, duplicateFailure, mismatchFailure })
+                .with({ parseFailure: true }, () => (
+                    <MessageModal
+                        visible={showMessageModal}
+                        icon="failure"
+                        title={t("hunt.drivenHunt.hunterManagement.scanner.parseFailure.title")}
+                        description={t("hunt.drivenHunt.hunterManagement.scanner.parseFailure.description")}
+                        buttons={
+                            <Button
+                                title={t("hunt.drivenHunt.hunterManagement.scanner.parseFailure.button")}
+                                onPress={() => {
+                                    setParseFailure(false);
+                                }}
+                            />
+                        }
                     />
-                }
-            />
-            <MessageModal
-                visible={cardFailure}
-                icon="failure"
-                title={t("hunt.drivenHunt.hunterManagement.scanner.cardFailure.title")}
-                description={t("hunt.drivenHunt.hunterManagement.scanner.cardFailure.description", {
-                    hunter: profile ? [profile.fn, profile.ln, profile.cn].join(" ") : "??",
-                })}
-                buttons={
-                    <Button
-                        title={t("hunt.drivenHunt.hunterManagement.scanner.cardFailure.button")}
-                        onPress={() => {
-                            setCardFailure(false);
-                        }}
+                ))
+                .with({ cardFailure: true }, () => (
+                    <MessageModal
+                        visible={showMessageModal}
+                        icon="failure"
+                        title={t("hunt.drivenHunt.hunterManagement.scanner.cardFailure.title")}
+                        description={t("hunt.drivenHunt.hunterManagement.scanner.cardFailure.description", {
+                            hunter: profile ? [profile.fn, profile.ln, profile.cn].join(" ") : "??",
+                        })}
+                        buttons={
+                            <Button
+                                title={t("hunt.drivenHunt.hunterManagement.scanner.cardFailure.button")}
+                                onPress={() => {
+                                    setCardFailure(false);
+                                }}
+                            />
+                        }
                     />
-                }
-            />
-            <MessageModal
-                visible={duplicateFailure}
-                icon="failure"
-                title={t("hunt.drivenHunt.hunterManagement.scanner.duplicateFailure.title")}
-                description={t("hunt.drivenHunt.hunterManagement.scanner.duplicateFailure.description", {
-                    hunter: profile ? [profile.fn, profile.ln, profile.cn].join(" ") : "??",
-                })}
-                buttons={
-                    <Button
-                        title={t("hunt.drivenHunt.hunterManagement.scanner.duplicateFailure.button")}
-                        onPress={() => {
-                            setDuplicateFailure(false);
-                        }}
+                ))
+                .with({ duplicateFailure: true }, () => (
+                    <MessageModal
+                        visible={showMessageModal}
+                        icon="failure"
+                        title={t("hunt.drivenHunt.hunterManagement.scanner.duplicateFailure.title")}
+                        description={t("hunt.drivenHunt.hunterManagement.scanner.duplicateFailure.description", {
+                            hunter: profile ? [profile.fn, profile.ln, profile.cn].join(" ") : "??",
+                        })}
+                        buttons={
+                            <Button
+                                title={t("hunt.drivenHunt.hunterManagement.scanner.duplicateFailure.button")}
+                                onPress={() => {
+                                    setDuplicateFailure(false);
+                                }}
+                            />
+                        }
                     />
-                }
-            />
-            <MessageModal
-                visible={mismatchFailure}
-                icon="failure"
-                title={t("hunt.drivenHunt.hunterManagement.scanner.mismatchFailure.title")}
-                description={t("hunt.drivenHunt.hunterManagement.scanner.mismatchFailure.description", {
-                    hunter: profile ? [profile.fn, profile.ln, profile.cn].join(" ") : "??",
-                })}
-                buttons={
-                    <Button
-                        title={t("hunt.drivenHunt.hunterManagement.scanner.mismatchFailure.button")}
-                        onPress={() => {
-                            setMismatchFailure(false);
-                        }}
+                ))
+                .with({ mismatchFailure: true }, () => (
+                    <MessageModal
+                        visible={showMessageModal}
+                        icon="failure"
+                        title={t("hunt.drivenHunt.hunterManagement.scanner.mismatchFailure.title")}
+                        description={t("hunt.drivenHunt.hunterManagement.scanner.mismatchFailure.description", {
+                            hunter: profile ? [profile.fn, profile.ln, profile.cn].join(" ") : "??",
+                        })}
+                        buttons={
+                            <Button
+                                title={t("hunt.drivenHunt.hunterManagement.scanner.mismatchFailure.button")}
+                                onPress={() => {
+                                    setMismatchFailure(false);
+                                }}
+                            />
+                        }
                     />
-                }
-            />
+                ))
+                .otherwise(() => (
+                    <MessageModal
+                        visible={showMessageModal}
+                        icon="hunt"
+                        title={t("hunt.drivenHunt.hunterManagement.scanner.confirmation.title", {
+                            hunter: profile ? [profile.fn, profile.ln, profile.cn].join(" ") : "??",
+                        })}
+                        onBackButtonPress={() => {
+                            setConfirmation(false);
+                        }}
+                        buttons={
+                            <>
+                                <Button
+                                    title={t("hunt.drivenHunt.hunterManagement.scanner.confirmation.confirm")}
+                                    onPress={onConfirm}
+                                />
+                                <Button
+                                    title={t("hunt.drivenHunt.hunterManagement.scanner.confirmation.reject")}
+                                    onPress={() => {
+                                        setConfirmation(false);
+                                    }}
+                                    variant="secondary-outlined"
+                                />
+                            </>
+                        }
+                    />
+                ))}
         </QRScannerModal>
     );
 }

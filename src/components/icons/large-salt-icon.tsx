@@ -1,0 +1,33 @@
+import * as React from "react";
+import Svg, { Path } from "react-native-svg";
+import { Color, theme } from "~/theme";
+
+type LargeSaltIconProps = {
+    width?: number;
+    height?: number;
+    color?: Color;
+};
+
+export function LargeSaltIcon({ width = 32, height = 32, color = "gray8" }: LargeSaltIconProps) {
+    const fillColor = theme.color[color as keyof typeof theme.color];
+    return (
+        <Svg width={width} height={height} viewBox="0 0 32 32" fill={fillColor}>
+            <Path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M15.434 3.045a1 1 0 0 1 .734.442l6.344 9.568a1 1 0 0 1-.127 1.26l-8.07 8.07a1 1 0 0 1-1.26.127l-9.568-6.344a1 1 0 0 1-.154-1.54L14.627 3.332a1 1 0 0 1 .807-.288ZM5.612 15.177l7.867 5.216 6.914-6.914-5.216-7.867-9.565 9.565Z"
+            />
+            <Path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M24.564 19.434a1.086 1.086 0 0 0 0-1.527l-2.882-2.882-6.653 6.653 2.882 2.882a1.086 1.086 0 0 0 1.527 0l5.126-5.126Zm1.414-2.942c1.2 1.2 1.2 3.157 0 4.356l-5.126 5.126a3.086 3.086 0 0 1-4.355 0l-3.589-3.589a1 1 0 0 1 0-1.414l8.067-8.067a1 1 0 0 1 1.415 0l3.588 3.588Z"
+            />
+            <Path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M21.846 19.026a1 1 0 0 1 1.414-.02l1.58 1.54a1 1 0 0 1-1.394 1.433l-1.581-1.54a1 1 0 0 1-.02-1.413ZM18.988 21.873a1 1 0 0 1 1.414-.014l1.581 1.55a1 1 0 0 1-1.4 1.428l-1.58-1.55a1 1 0 0 1-.015-1.414Z"
+            />
+            <Path d="M28.147 25.246a1.346 1.346 0 0 0-1.903-1.904c-.52.53-.53 1.384 0 1.914s1.383.53 1.914 0l-.01-.01ZM25.287 28.106a1.346 1.346 0 0 0-1.903-1.904c-.52.53-.53 1.384 0 1.914s1.383.53 1.914 0l-.01-.01ZM28.605 28.605a1.346 1.346 0 0 0-1.903-1.903c-.52.53-.53 1.383 0 1.913s1.383.53 1.913 0l-.01-.01Z" />
+        </Svg>
+    );
+}

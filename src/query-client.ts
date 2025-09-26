@@ -4,6 +4,7 @@ export const queryClient = new QueryClient();
 
 export const queryKeys = {
     classifiers: ["classifiers"],
+    config: ["config"],
     contracts: ["contracts"],
     districtDamages: ["districtDamages"],
     districts: ["districts"],
@@ -15,5 +16,8 @@ export const queryKeys = {
     news: ["news"],
     permits: ["permits"],
     profile: ["profile"],
-    config: ["config"],
+    speciesStatistics: ["speciesStatistics"],
+    individualHuntsStatistics: ["individualHuntsStatistics"],
+    drivenHuntsStatistics: ["drivenHuntsStatistics"],
+    unlimitedHuntedAnimals: ["unlimitedHuntedAnimals"],
 } as const;

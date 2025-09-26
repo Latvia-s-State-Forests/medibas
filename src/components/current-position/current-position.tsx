@@ -21,18 +21,17 @@ type CurrentPositionProps = {
 export const CurrentPosition = React.forwardRef<CurrentPositionHandle, CurrentPositionProps>(
     ({ initialPosition, onChange }, ref) => {
         const config = useConfig();
-        const [state, send] = useMachine(() => currentPositionMachine, {
-            context: {
-                position: initialPosition,
-                config,
-            },
-            actions: {
-                notifyPosition: (context) => onChange(context.position),
-            },
-        });
+        const [state, send] = useMachine(
+            currentPositionMachine.provide({
+                actions: {
+                    notifyPosition: ({ context }) => onChange(context.position),
+                },
+            }),
+            { input: { config, initialPosition } }
+        );
 
         React.useImperativeHandle(ref, () => ({
-            reset: () => send("RESET"),
+            reset: () => send({ type: "RESET" }),
         }));
 
         function openAppSettings() {
@@ -40,7 +39,7 @@ export const CurrentPosition = React.forwardRef<CurrentPositionHandle, CurrentPo
         }
 
         function onRetry() {
-            send("RESET");
+            send({ type: "RESET" });
         }
 
         if (state.matches({ failure: "permissions" })) {
@@ -62,3 +61,5 @@ export const CurrentPosition = React.forwardRef<CurrentPositionHandle, CurrentPo
         return <CurrentPositionLoading />;
     }
 );
+
+CurrentPosition.displayName = "CurrentPosition";

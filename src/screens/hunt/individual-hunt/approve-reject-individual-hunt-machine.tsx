@@ -3,7 +3,7 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, TextInput, View } from "react-native";
 import { match } from "ts-pattern";
-import { ActorRefFrom, assign, createMachine } from "xstate";
+import { ActorRefFrom, assign, fromCallback, setup } from "xstate";
 import { api } from "~/api";
 import { Button } from "~/components/button";
 import { Dialog } from "~/components/dialog";
@@ -17,114 +17,78 @@ import { theme } from "~/theme";
 import { ApproveOrRejectIndividualHunt, Hunt } from "~/types/hunts";
 import { NetworkStatusEvent, networkStatusMachine } from "~/utils/network-status-machine";
 
-export const approveOrRejectIndividualHuntMachine = createMachine(
-    {
-        id: "approveOrRejectIndividualHunt",
-        schema: {
-            events: {} as
-                | { type: "SUBMIT"; payload: ApproveOrRejectIndividualHunt }
-                | { type: "SUBMIT_SUCCESS" }
-                | { type: "SUBMIT_FAILURE" }
-                | { type: "UPDATE_SUCCESS" }
-                | { type: "UPDATE_FAILURE" }
-                | { type: "RESET" }
-                | { type: "UPDATE" }
-                | NetworkStatusEvent,
-            context: {} as { payload?: ApproveOrRejectIndividualHunt },
-        },
-        initial: "idle",
-        states: {
-            idle: {
-                on: {
-                    SUBMIT: { target: "verifyingNetworkConnection", actions: ["setPayload"] },
-                },
-            },
+type ApproveOrRejectIndividualHuntEvent =
+    | { type: "SUBMIT"; payload: ApproveOrRejectIndividualHunt }
+    | { type: "SUBMIT_SUCCESS" }
+    | { type: "SUBMIT_FAILURE" }
+    | { type: "UPDATE_SUCCESS" }
+    | { type: "UPDATE_FAILURE" }
+    | { type: "RESET" }
+    | { type: "UPDATE" }
+    | NetworkStatusEvent;
 
-            verifyingNetworkConnection: {
-                invoke: { src: networkStatusMachine },
-                on: {
-                    NETWORK_AVAILABLE: { target: "sendHuntApprovalOrRejection" },
-                    NETWORK_UNAVAILABLE: { target: "networkFailure" },
-                },
-            },
-
-            sendHuntApprovalOrRejection: {
-                invoke: { src: "approveOrRejectIndividualHunt" },
-                on: {
-                    SUBMIT_SUCCESS: { target: "success" },
-                    SUBMIT_FAILURE: { target: "otherFailure" },
-                },
-            },
-
-            success: {
-                on: {
-                    UPDATE: { target: "updatingHunt" },
-                },
-            },
-
-            updatingHunt: {
-                invoke: { src: "updateHunt" },
-                on: {
-                    UPDATE_SUCCESS: { target: "idle" },
-                    UPDATE_FAILURE: { target: "otherFailure" },
-                },
-            },
-
-            networkFailure: {
-                on: {
-                    RESET: { target: "idle", actions: ["resetPayload"] },
-                },
-            },
-
-            otherFailure: {
-                on: {
-                    RESET: { target: "idle", actions: ["resetPayload"] },
-                },
-            },
-        },
-        preserveActionOrder: true,
-        predictableActionArguments: true,
+export const approveOrRejectIndividualHuntMachine = setup({
+    types: {
+        events: {} as ApproveOrRejectIndividualHuntEvent,
+        context: {} as { payload?: ApproveOrRejectIndividualHunt },
     },
-    {
-        actions: {
-            setPayload: assign({
-                payload: (context, event) => {
-                    if (event.type !== "SUBMIT") {
-                        return context.payload;
-                    }
-                    return event.payload;
-                },
-            }),
-            resetPayload: assign({
-                payload: undefined,
-            }),
-        },
-        services: {
-            approveOrRejectIndividualHunt: (context) => async (send) => {
-                if (!context.payload) {
+    actions: {
+        setPayload: assign({
+            payload: ({ context, event }) => {
+                if (event.type !== "SUBMIT") {
+                    return context.payload;
+                }
+                return event.payload;
+            },
+        }),
+        resetPayload: assign({
+            payload: undefined,
+        }),
+    },
+    actors: {
+        approveOrRejectIndividualHunt: fromCallback(
+            ({
+                sendBack,
+                input,
+            }: {
+                sendBack: (event: ApproveOrRejectIndividualHuntEvent) => void;
+                input: { payload?: ApproveOrRejectIndividualHunt };
+            }) => {
+                const payload = input?.payload;
+                if (!payload) {
                     logger.error("Failed to add driven hunt, payload is missing");
-                    send({ type: "SUBMIT_FAILURE" });
+                    sendBack({ type: "SUBMIT_FAILURE" });
                     return;
                 }
-                try {
-                    await api.approveOrRejectIndividualHunt(context.payload);
-                    send({ type: "SUBMIT_SUCCESS" });
-                } catch (error) {
-                    logger.error("Failed to add driven hunt", error);
-                    send({ type: "SUBMIT_FAILURE" });
-                }
-            },
-            updateHunt: (context) => async (send) => {
-                try {
+
+                api.approveOrRejectIndividualHunt(payload)
+                    .then(() => {
+                        sendBack({ type: "SUBMIT_SUCCESS" });
+                    })
+                    .catch((error) => {
+                        logger.error("Failed to add driven hunt", error);
+                        sendBack({ type: "SUBMIT_FAILURE" });
+                    });
+            }
+        ),
+        updateHunt: fromCallback(
+            ({
+                sendBack,
+                input,
+            }: {
+                sendBack: (event: ApproveOrRejectIndividualHuntEvent) => void;
+                input: { payload?: ApproveOrRejectIndividualHunt };
+            }) => {
+                async function update(payload: ApproveOrRejectIndividualHunt | undefined) {
                     const existingHuntData = queryClient.getQueryData(queryKeys.hunts) as Hunt[] | undefined;
 
-                    if (existingHuntData && context.payload) {
+                    if (existingHuntData && payload) {
                         const updatedData = existingHuntData.map((hunt) => {
-                            if (hunt.id === context.payload?.id) {
+                            if (hunt.id === payload.id) {
                                 return {
                                     ...hunt,
-                                    isIndividualHuntApproved: context.payload?.isApproved,
-                                    reasonForRejection: context.payload?.reasonForRejection,
+                                    isIndividualHuntApproved: payload.isApproved,
+                                    reasonForRejection: payload.reasonForRejection,
                                 };
                             }
                             return hunt;
@@ -132,28 +96,91 @@ export const approveOrRejectIndividualHuntMachine = createMachine(
 
                         queryClient.setQueryData(queryKeys.hunts, updatedData);
                     } else {
-                        await queryClient.refetchQueries(queryKeys.hunts, undefined, { throwOnError: true });
+                        await queryClient.refetchQueries({ queryKey: queryKeys.hunts }, { throwOnError: true });
                     }
-
-                    send({ type: "UPDATE_SUCCESS" });
-                } catch (error) {
-                    logger.error("Failed to refetch hunts", error);
-                    send({ type: "UPDATE_FAILURE" });
                 }
+
+                update(input?.payload)
+                    .then(() => {
+                        sendBack({ type: "UPDATE_SUCCESS" });
+                    })
+                    .catch((error) => {
+                        logger.error("Failed to refetch hunts", error);
+                        sendBack({ type: "UPDATE_FAILURE" });
+                    });
+            }
+        ),
+    },
+}).createMachine({
+    id: "approveOrRejectIndividualHunt",
+    initial: "idle",
+    states: {
+        idle: {
+            on: {
+                SUBMIT: { target: "verifyingNetworkConnection", actions: ["setPayload"] },
             },
         },
-    }
-);
+
+        verifyingNetworkConnection: {
+            invoke: { src: networkStatusMachine },
+            on: {
+                NETWORK_AVAILABLE: { target: "sendHuntApprovalOrRejection" },
+                NETWORK_UNAVAILABLE: { target: "networkFailure" },
+            },
+        },
+
+        sendHuntApprovalOrRejection: {
+            invoke: {
+                src: "approveOrRejectIndividualHunt",
+                input: ({ context }) => ({ payload: context.payload }),
+            },
+            on: {
+                SUBMIT_SUCCESS: { target: "success" },
+                SUBMIT_FAILURE: { target: "otherFailure" },
+            },
+        },
+
+        success: {
+            on: {
+                UPDATE: { target: "updatingHunt" },
+            },
+        },
+
+        updatingHunt: {
+            invoke: {
+                src: "updateHunt",
+                input: ({ context }) => ({ payload: context.payload }),
+            },
+            on: {
+                UPDATE_SUCCESS: { target: "idle" },
+                UPDATE_FAILURE: { target: "otherFailure" },
+            },
+        },
+
+        networkFailure: {
+            on: {
+                RESET: { target: "idle", actions: ["resetPayload"] },
+            },
+        },
+
+        otherFailure: {
+            on: {
+                RESET: { target: "idle", actions: ["resetPayload"] },
+            },
+        },
+    },
+});
+
 type ApproveRejectStatusDialogProps = {
     huntId: number;
     isRejection: boolean;
     onCancelRejection(): void;
-    service: ActorRefFrom<typeof approveOrRejectIndividualHuntMachine>;
+    actor: ActorRefFrom<typeof approveOrRejectIndividualHuntMachine>;
 };
 
 export function ApproveRejectStatusDialog({
     huntId,
-    service,
+    actor,
     isRejection,
     onCancelRejection,
 }: ApproveRejectStatusDialogProps) {
@@ -172,7 +199,7 @@ export function ApproveRejectStatusDialog({
         setStatus("idle");
         setIsRejected(true);
         setTimeout(() => {
-            service.send({
+            actor.send({
                 type: "SUBMIT",
                 payload: {
                     id: huntId,
@@ -186,7 +213,7 @@ export function ApproveRejectStatusDialog({
 
     function onModalClose() {
         onCancelRejection();
-        service.send("RESET");
+        actor.send({ type: "RESET" });
         setValueMultiline("");
         setStatus("idle");
     }
@@ -198,16 +225,7 @@ export function ApproveRejectStatusDialog({
     }, [isRejection]);
 
     React.useEffect(() => {
-        const subscription = service.subscribe((state) => {
-            const message = "REJECT HUNT " + JSON.stringify(state.value) + " " + JSON.stringify(state.event);
-            logger.log(message);
-        });
-
-        return () => subscription.unsubscribe();
-    }, [service]);
-
-    React.useEffect(() => {
-        const subscription = service.subscribe((state) => {
+        const subscription = actor.subscribe((state) => {
             if (state.matches("verifyingNetworkConnection") || state.matches("sendHuntApprovalOrRejection")) {
                 setVisible(true);
                 setStatus("loading");
@@ -228,7 +246,7 @@ export function ApproveRejectStatusDialog({
         });
 
         return () => subscription.unsubscribe();
-    }, [service]);
+    }, [actor]);
 
     return match(status)
         .with("reject", () => (
@@ -277,7 +295,7 @@ export function ApproveRejectStatusDialog({
                         title={t("hunt.individualHunt.approveOrReject.continue")}
                         onPress={async () => {
                             navigation.goBack();
-                            service.send({ type: "UPDATE" });
+                            actor.send({ type: "UPDATE" });
                         }}
                     />
                 }
@@ -289,7 +307,7 @@ export function ApproveRejectStatusDialog({
                 icon="failure"
                 title={t("networkFailure.title")}
                 description={t("networkFailure.description")}
-                buttons={<Button title={t("networkFailure.close")} onPress={() => service.send("RESET")} />}
+                buttons={<Button title={t("networkFailure.close")} onPress={() => actor.send({ type: "RESET" })} />}
             />
         ))
         .with("otherFailure", () => (
@@ -302,7 +320,7 @@ export function ApproveRejectStatusDialog({
                         : t("hunt.individualHunt.approveOrReject.failureApproval")
                 }
                 description={t("hunt.individualHunt.approveOrReject.failureDescription")}
-                buttons={<Button title={t("networkFailure.close")} onPress={() => service.send("RESET")} />}
+                buttons={<Button title={t("networkFailure.close")} onPress={() => actor.send({ type: "RESET" })} />}
             />
         ))
         .with("idle", () => null)

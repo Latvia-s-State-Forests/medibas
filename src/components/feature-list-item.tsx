@@ -10,6 +10,7 @@ import { DistrictDamage } from "~/types/district-damages";
 import { Feature } from "~/types/features";
 import { HuntedAnimal } from "~/types/hunted-animals";
 import { Infrastructure } from "~/types/infrastructure";
+import { UnlimitedHuntedAnimal } from "~/types/unlimited-hunted-animals";
 import { getDescriptionForClassifierOption } from "~/utils/classifiers";
 import { formatDateTime } from "~/utils/format-date-time";
 import { isEditedInfrastructureNewer } from "~/utils/is-edited-infrastructure-newer";
@@ -25,7 +26,8 @@ type FeatureListItemProps = {
         | (HuntedAnimal & { featureType: "district-hunted-red-deer" })
         | (HuntedAnimal & { featureType: "district-hunted-moose" })
         | (HuntedAnimal & { featureType: "district-hunted-roe-deer" })
-        | (HuntedAnimal & { featureType: "district-hunted-boar" });
+        | (HuntedAnimal & { featureType: "district-hunted-boar" })
+        | (UnlimitedHuntedAnimal & { featureType: "district-hunted-others-unlimited" });
     onPress: () => void;
 };
 
@@ -33,6 +35,8 @@ export function FeatureListItem(props: FeatureListItemProps) {
     const { t } = useTranslation();
     const classifiers = useClassifiers();
     const language = getAppLanguage();
+    const UNKNOWN_SPECIES = t("features.unknownSpecies");
+    const UNKNOWN_TYPE = t("features.unknownType");
     const [pressed, setPressed] = React.useState(false);
     const { featureType } = props.feature;
     function positionText(): string {
@@ -44,7 +48,8 @@ export function FeatureListItem(props: FeatureListItemProps) {
             featureType !== "district-hunted-red-deer" &&
             featureType !== "district-hunted-moose" &&
             featureType !== "district-hunted-roe-deer" &&
-            featureType !== "district-hunted-boar"
+            featureType !== "district-hunted-boar" &&
+            featureType !== "district-hunted-others-unlimited"
         ) {
             text += `${props.feature.geometry.coordinates[1].toFixed(
                 5
@@ -54,7 +59,8 @@ export function FeatureListItem(props: FeatureListItemProps) {
             featureType === "district-hunted-red-deer" ||
             featureType === "district-hunted-moose" ||
             featureType === "district-hunted-roe-deer" ||
-            featureType === "district-hunted-boar"
+            featureType === "district-hunted-boar" ||
+            featureType === "district-hunted-others-unlimited"
         ) {
             text += `${props.feature.location[1].toFixed(5)}, ${props.feature.location[0].toFixed(5)}`;
         } else {
@@ -65,15 +71,19 @@ export function FeatureListItem(props: FeatureListItemProps) {
 
     function icon(): LargeIconName {
         if (featureType === "district-damages") {
-            return configuration.damage.typeIcons[
-                props.feature.damageTypeId as keyof typeof configuration.damage.typeIcons
-            ];
+            return (
+                configuration.damage.typeIcons[
+                    props.feature.damageTypeId as keyof typeof configuration.damage.typeIcons
+                ] ?? "cross"
+            );
         }
 
         if (featureType === "district-infrastructures") {
-            return configuration.huntingInfrastructure.typeIcons[
-                props.feature.typeId as keyof typeof configuration.huntingInfrastructure.typeIcons
-            ];
+            return (
+                configuration.huntingInfrastructure.typeIcons[
+                    props.feature.typeId as keyof typeof configuration.huntingInfrastructure.typeIcons
+                ] ?? "cross"
+            );
         }
 
         if (
@@ -81,28 +91,37 @@ export function FeatureListItem(props: FeatureListItemProps) {
             featureType === "district-hunted-red-deer" ||
             featureType === "district-hunted-moose" ||
             featureType === "district-hunted-roe-deer" ||
-            featureType === "district-hunted-boar"
+            featureType === "district-hunted-boar" ||
+            featureType === "district-hunted-others-unlimited"
         ) {
-            return configuration.hunt.speciesIcons[
-                props.feature.speciesId as keyof typeof configuration.hunt.speciesIcons
-            ];
+            return (
+                configuration.hunt.speciesIcons[
+                    props.feature.speciesId as keyof typeof configuration.hunt.speciesIcons
+                ] ?? "animals"
+            );
         }
 
         if (featureType === "damages") {
-            return configuration.damage.typeIcons[
-                props.feature.properties.type as keyof typeof configuration.damage.typeIcons
-            ];
+            return (
+                configuration.damage.typeIcons[
+                    props.feature.properties.type as keyof typeof configuration.damage.typeIcons
+                ] ?? "cross"
+            );
         }
 
         if (featureType === "observations") {
             if (props.feature.properties.observationTypeId === ObservationTypeId.DirectlyObservedAnimals) {
-                return configuration.observations.speciesIcons[
-                    props.feature.properties.speciesId as keyof typeof configuration.observations.speciesIcons
-                ];
+                return (
+                    configuration.observations.speciesIcons[
+                        props.feature.properties.speciesId as keyof typeof configuration.observations.speciesIcons
+                    ] ?? "animals"
+                );
             }
-            return configuration.observations.typeIcons[
-                props.feature.properties.observationTypeId as keyof typeof configuration.observations.typeIcons
-            ];
+            return (
+                configuration.observations.typeIcons[
+                    props.feature.properties.observationTypeId as keyof typeof configuration.observations.typeIcons
+                ] ?? "cross"
+            );
         }
 
         return "animals";
@@ -114,7 +133,7 @@ export function FeatureListItem(props: FeatureListItemProps) {
         if (feature.featureType === "district-damages") {
             return (
                 getDescriptionForClassifierOption(classifiers.damageTypes.options, language, feature.damageTypeId) ??
-                "-"
+                UNKNOWN_TYPE
             );
         }
 
@@ -124,7 +143,7 @@ export function FeatureListItem(props: FeatureListItemProps) {
                     classifiers.huntingInfrastructureTypes.options,
                     language,
                     feature.typeId
-                ) ?? "-"
+                ) ?? UNKNOWN_TYPE
             );
         }
 
@@ -133,31 +152,35 @@ export function FeatureListItem(props: FeatureListItemProps) {
             feature.featureType === "district-hunted-red-deer" ||
             feature.featureType === "district-hunted-moose" ||
             feature.featureType === "district-hunted-roe-deer" ||
-            feature.featureType === "district-hunted-boar"
+            feature.featureType === "district-hunted-boar" ||
+            feature.featureType === "district-hunted-others-unlimited"
         ) {
             return (
-                getDescriptionForClassifierOption(classifiers.animalSpecies.options, language, feature.speciesId) ?? "-"
+                getDescriptionForClassifierOption(classifiers.animalSpecies.options, language, feature.speciesId) ??
+                UNKNOWN_SPECIES
             );
         }
 
         if (feature.featureType === "damages") {
             return (
                 getDescriptionForClassifierOption(classifiers.damageTypes.options, language, feature.properties.type) ??
-                "-"
+                UNKNOWN_TYPE
             );
         }
 
         if (feature.featureType === "observations") {
-            const typeTitle = getDescriptionForClassifierOption(
-                classifiers.observationTypes.options,
-                language,
-                feature.properties.observationTypeId
-            );
-            const speciesTitle = getDescriptionForClassifierOption(
-                classifiers.animalSpecies.options,
-                language,
-                feature.properties.speciesId
-            );
+            const typeTitle =
+                getDescriptionForClassifierOption(
+                    classifiers.observationTypes.options,
+                    language,
+                    feature.properties.observationTypeId
+                ) ?? UNKNOWN_TYPE;
+            const speciesTitle =
+                getDescriptionForClassifierOption(
+                    classifiers.animalSpecies.options,
+                    language,
+                    feature.properties.speciesId
+                ) ?? UNKNOWN_SPECIES;
             return `${typeTitle} - ${speciesTitle}`;
         }
 
@@ -170,7 +193,8 @@ export function FeatureListItem(props: FeatureListItemProps) {
             featureType === "district-hunted-red-deer" ||
             featureType === "district-hunted-moose" ||
             featureType === "district-hunted-roe-deer" ||
-            featureType === "district-hunted-boar"
+            featureType === "district-hunted-boar" ||
+            featureType === "district-hunted-others-unlimited"
         ) {
             return formatDateTime(props.feature.huntedTime);
         }

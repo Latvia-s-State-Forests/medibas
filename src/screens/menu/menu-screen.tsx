@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Header } from "~/components/header";
 import { useUnsyncedReportsCount } from "~/components/reports-provider";
 import { useNews } from "~/hooks/use-news";
+import { usePermissions } from "~/hooks/use-permissions";
 import { theme } from "~/theme";
 import { MenuListItem } from "./menu-list-item";
 
@@ -14,6 +15,7 @@ export function MenuScreen() {
     const { t } = useTranslation();
     const insets = useSafeAreaInsets();
     const unSyncedChangesCount = useUnsyncedReportsCount();
+    const permissions = usePermissions();
 
     const { unreadNewsCount } = useNews();
 
@@ -39,6 +41,14 @@ export function MenuScreen() {
                     icon="envelope"
                     hasNews
                 />
+                {/* //TODO: Make sure which permissions should be used here */}
+                {permissions.viewStatistics && (
+                    <MenuListItem
+                        onPress={() => navigation.navigate("MyStatisticsScreen")}
+                        title={t("menu.myStatistics")}
+                        icon="stats"
+                    />
+                )}
                 <MenuListItem
                     onPress={() => navigation.navigate("SettingsScreen")}
                     title={t("menu.settings")}

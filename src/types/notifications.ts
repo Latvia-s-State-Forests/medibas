@@ -17,6 +17,7 @@ export type NotificationData = {
 export const pushNotificationsTokenSchema = z.object({
     token: z.string(),
     language: z.union([z.literal("lv"), z.literal("en"), z.literal("ru")]),
+    tokenEnv: z.string(),
 });
 
 export type PushNotificationsToken = z.infer<typeof pushNotificationsTokenSchema>;

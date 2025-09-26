@@ -1,7 +1,7 @@
 import React from "react";
 import { Linking, Platform, StyleSheet, View } from "react-native";
-import SplashLogo from "~/assets/images/logo-outline.svg";
 import { Button } from "~/components/button";
+import { OtherSplashIcon } from "~/components/icons/other-splash-icon";
 import { ScreenBackgroundLayout } from "~/components/screen-background-layout";
 import { Text } from "~/components/text";
 import { configuration } from "~/configuration";
@@ -18,7 +18,7 @@ export function UpdateScreen(props: UpdateScreenProps) {
         <ScreenBackgroundLayout>
             <View style={styles.container}>
                 <View style={styles.logoContainer}>
-                    <SplashLogo width={150} />
+                    <OtherSplashIcon width={150} />
                 </View>
                 {props.mandatory ? <UpdateMandatoryPopup /> : <UpdateOptionalPopup onPostpone={props.onPostpone} />}
             </View>

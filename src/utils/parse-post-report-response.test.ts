@@ -2,113 +2,194 @@ import { FeatureLayer } from "~/types/report";
 import { parsePostReportResponse } from "./parse-post-report-response";
 
 describe("parsePostReportResponse", () => {
-    it("parses success response for all layers except LimitedHuntReport", () => {
+    it("parses limited hunt report response", () => {
         const result = parsePostReportResponse(
             200,
-            "application/json; charset=utf-8",
-            '[{"id":1,"addResults":[],"updateResults":[],"deleteResults":[]}]',
+            "application/json",
+            '{"status":"ok","reportId":1,"permitId":1,"strapNumber":"AB25-00001"}',
+            FeatureLayer.LimitedHuntReport
+        );
+        expect(result).toEqual({ success: true, result: { reportId: 1, permitId: 1, strapNumber: "AB25-00001" } });
+    });
+
+    it("parses other report response", () => {
+        const result = parsePostReportResponse(
+            200,
+            "application/json",
+            '{"status": "ok"}',
             FeatureLayer.DirectlyObservedAnimalsObservation
         );
         expect(result).toEqual({ success: true });
     });
 
-    it("parses success response for LimitedHuntReport", () => {
+    it("parses limited hunt response with the RequestAlreadyProcessed error code", () => {
         const result = parsePostReportResponse(
             200,
-            "application/json; charset=utf-8",
-            '[{"strapNumber":"AN080006","permitId":53362,"reportId":3159,"id":8,"addResults":[],"updateResults":[],"deleteResults":[]}]',
+            "application/json",
+            `
+            {
+                "strapNumber": "AB25-00001",
+                "permitId": 1,
+                "reportId": 1,
+                "code": 5701,
+                "status": "ok",
+                "message": "{\\"placeholder\\":\\"Pieprasījums jau apstrādāts\\"}"
+            }
+            `,
             FeatureLayer.LimitedHuntReport
         );
-        expect(result).toEqual({
-            success: true,
-            result: {
-                strapNumber: "AN080006",
-                permitId: 53362,
-                reportId: 3159,
-            },
-        });
+        expect(result).toEqual({ success: true, result: { reportId: 1, permitId: 1, strapNumber: "AB25-00001" } });
     });
 
-    it("parses error response", () => {
+    it("parses other response with the RequestAlreadyProcessed error code", () => {
         const result = parsePostReportResponse(
             200,
-            "application/json; charset=utf-8",
-            '[{"id":3,"error":{"code":5402,"message":"{\\"placeholder\\":\\"Attēls ir obligāts\\"}"}}]',
-            FeatureLayer.DeadObservation
+            "application/json",
+            `
+            {
+                "code": 5701,
+                "status": "ok",
+                "message": "{\\"placeholder\\":\\"Pieprasījums jau apstrādāts\\"}"
+            }
+            `,
+            FeatureLayer.DirectlyObservedAnimalsObservation
+        );
+        expect(result).toEqual({ success: true });
+    });
+
+    it("parses 200 response with error code", () => {
+        const result = parsePostReportResponse(
+            200,
+            "application/json",
+            '{"status":"ok","code":5601,"message":"{\\"placeholder\\":\\"Nav atrasti atbilstoši iecirkņi\\"}"}',
+            FeatureLayer.LimitedHuntReport
         );
         expect(result).toEqual({
             success: false,
             error: {
                 type: "server",
-                code: 5402,
-                description: '{"placeholder":"Attēls ir obligāts"}',
+                code: 5601,
+                description: '{"placeholder":"Nav atrasti atbilstoši iecirkņi"}',
             },
         });
     });
 
-    it("parses rate limited response", () => {
-        const result = parsePostReportResponse(503, undefined, undefined, FeatureLayer.SignsOfPresenceObservation);
-        expect(result).toEqual({
-            success: false,
-            error: { type: "other" },
-            reason: "Invalid status, expected: 200, got: 503",
-        });
-    });
-
-    it("parses response with invalid content type", () => {
-        const result = parsePostReportResponse(200, "text/plain", "What's up", FeatureLayer.SignsOfPresenceObservation);
-        expect(result).toEqual({
-            success: false,
-            error: { type: "other" },
-            reason: 'Invalid content type, expected: "application/json[...]", got: text/plain',
-        });
-    });
-
-    it("parses response with missing response text", () => {
+    it("parses 400 response with error code", () => {
         const result = parsePostReportResponse(
-            200,
-            "application/json; charset=utf-8",
-            undefined,
-            FeatureLayer.SignsOfPresenceObservation
+            400,
+            "application/json",
+            '{"status":"ok","code":5601,"message":"{\\"placeholder\\":\\"Nav atrasti atbilstoši iecirkņi\\"}"}',
+            FeatureLayer.LimitedHuntReport
         );
-        expect(result).toEqual({ success: false, error: { type: "other" }, reason: "Missing response text" });
+        expect(result).toEqual({
+            success: false,
+            error: {
+                type: "server",
+                code: 5601,
+                description: '{"placeholder":"Nav atrasti atbilstoši iecirkņi"}',
+            },
+        });
     });
 
-    it("parses response with layer mismatch", () => {
+    it("parses non 200 or 400 response", () => {
         const result = parsePostReportResponse(
-            200,
-            "application/json; charset=utf-8",
-            '[{"id":1,"addResults":[],"updateResults":[],"deleteResults":[]}]',
-            FeatureLayer.DeadObservation
+            500,
+            "application/json",
+            '{"status":"error","message":"Internal Server Error"}',
+            FeatureLayer.LimitedHuntReport
         );
         expect(result).toEqual({
             success: false,
             error: { type: "other" },
-            reason: "Layer mismatch, expected: 3, got: 1}",
+            reason: "Invalid status, expected 200 or 400, got: 500",
+        });
+    });
+
+    it("parses 400 response with an invalid content type", () => {
+        const result = parsePostReportResponse(
+            400,
+            "text/html",
+            `
+            <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>400 Bad Request</title>
+                </head>
+                <body>
+                    <h1>400 Bad Request</h1>
+                </body>
+            </html>
+            `,
+            FeatureLayer.LimitedHuntReport
+        );
+        expect(result).toEqual({
+            success: false,
+            error: { type: "other" },
+            reason: 'Invalid content type, expected: "application/json[...]", got: text/html',
         });
     });
 
     it("parses response with invalid json", () => {
         const result = parsePostReportResponse(
             200,
-            "application/json; charset=utf-8",
-            '[{"id":1',
+            "application/json",
+            '{"status":"ok"',
             FeatureLayer.DirectlyObservedAnimalsObservation
         );
         expect(result).toEqual({ success: false, error: { type: "other" }, reason: "Failed to parse" });
     });
 
-    it("parses response with missing strapNumber", () => {
+    it("parses response with empty response text", () => {
         const result = parsePostReportResponse(
             200,
-            "application/json; charset=utf-8",
-            '[{"permitId":53362,"reportId":3159,"id":8,"addResults":[],"updateResults":[],"deleteResults":[]}]',
+            "application/json",
+            "",
+            FeatureLayer.DirectlyObservedAnimalsObservation
+        );
+        expect(result).toEqual({ success: false, error: { type: "other" }, reason: "Missing response text" });
+    });
+
+    it("parses limited hunt report response with missing reportId", () => {
+        const result = parsePostReportResponse(
+            200,
+            "application/json",
+            '{"status":"ok","permitId":1,"strapNumber":"AB25-00001"}',
             FeatureLayer.LimitedHuntReport
         );
         expect(result).toEqual({
             success: false,
             error: { type: "other" },
-            reason: "Missing reportId, permitId or strapNumber, got: 3159, 53362, undefined",
+            reason: "Missing reportId, permitId or strapNumber, got: undefined, 1, AB25-00001",
+        });
+    });
+
+    it("parses limited hunt report response with missing permitId", () => {
+        const result = parsePostReportResponse(
+            200,
+            "application/json",
+            '{"status":"ok","reportId":1,"strapNumber":"AB25-00001"}',
+            FeatureLayer.LimitedHuntReport
+        );
+        expect(result).toEqual({
+            success: false,
+            error: { type: "other" },
+            reason: "Missing reportId, permitId or strapNumber, got: 1, undefined, AB25-00001",
+        });
+    });
+
+    it("parses limited hunt report response with missing strapNumber", () => {
+        const result = parsePostReportResponse(
+            200,
+            "application/json",
+            '{"status":"ok","reportId":1,"permitId":1}',
+            FeatureLayer.LimitedHuntReport
+        );
+        expect(result).toEqual({
+            success: false,
+            error: { type: "other" },
+            reason: "Missing reportId, permitId or strapNumber, got: 1, 1, undefined",
         });
     });
 });

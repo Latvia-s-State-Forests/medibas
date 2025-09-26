@@ -30,6 +30,7 @@ import { LicenseDetailScreen } from "~/screens/license-detail-screen";
 import { LicenseListScreen } from "~/screens/license-list-screen";
 import { MapSettingsModal } from "~/screens/map/map-settings-modal";
 import { MenuScreen } from "~/screens/menu/menu-screen";
+import { MyStatisticsScreen } from "~/screens/menu/my-statistics.screen";
 import { MemberDeletionModal } from "~/screens/mtl/member-management/member-deletion-modal";
 import { MemberManagementScreen } from "~/screens/mtl/member-management/member-management-screen";
 import { MemberRegistrationScreen } from "~/screens/mtl/member-management/member-registration-screen";
@@ -43,6 +44,15 @@ import { ReportStatusModal } from "~/screens/report-status-modal";
 import { ReportDetailScreen } from "~/screens/reports/report-detail-screen";
 import { ReportListScreen } from "~/screens/reports/report-list-screen";
 import { SettingsScreen } from "~/screens/settings/settings-screen";
+import { DrivenHuntListStatisticsScreen } from "~/screens/statistics/driven-hunts/driven-hunt-list-statistics-screen";
+import { DrivenHuntStatisticsDetailScreen } from "~/screens/statistics/driven-hunts/driven-hunt-statistics-detail-screen";
+import { DrivenHuntStatisticsScreen } from "~/screens/statistics/driven-hunts/driven-hunt-statistics-screen";
+import { IndividualHuntListStatisticsScreen } from "~/screens/statistics/individual-hunts/individual-hunt-list-statistics-screen";
+import { IndividualHuntStatisticsDetailScreen } from "~/screens/statistics/individual-hunts/individual-hunt-statistics-detail-screen";
+import { IndividualHuntStatisticsScreen } from "~/screens/statistics/individual-hunts/individual-hunt-statistics-screen";
+import { SpeciesStatisticsDetailScreen } from "~/screens/statistics/species/species-statistics-detail-screen";
+import { SpeciesStatisticsListScreen } from "~/screens/statistics/species/species-statistics-list-screen";
+import { SpeciesStatisticsScreen } from "~/screens/statistics/species/species-statistics-screen";
 import { RootNavigatorParams } from "~/types/navigation";
 
 const RootStack = createNativeStackNavigator<RootNavigatorParams>();
@@ -60,8 +70,27 @@ export function RootNavigator() {
                 <RootStack.Screen name="LicenseDetailScreen" component={LicenseDetailScreen} />
                 <RootStack.Screen name="ComponentExamplesNavigator" component={ComponentExamplesNavigator} />
                 <RootStack.Screen name="MenuScreen" component={MenuScreen} />
+                <RootStack.Screen name="MyStatisticsScreen" component={MyStatisticsScreen} />
                 <RootStack.Screen name="NewsScreen" component={NewsScreen} />
                 <RootStack.Screen name="SettingsScreen" component={SettingsScreen} />
+                <RootStack.Screen name="DrivenHuntStatisticsScreen" component={DrivenHuntStatisticsScreen} />
+                <RootStack.Screen name="DrivenHuntListStatisticsScreen" component={DrivenHuntListStatisticsScreen} />
+                <RootStack.Screen
+                    name="DrivenHuntStatisticsDetailScreen"
+                    component={DrivenHuntStatisticsDetailScreen}
+                />
+                <RootStack.Screen name="IndividualHuntStatisticsScreen" component={IndividualHuntStatisticsScreen} />
+                <RootStack.Screen
+                    name="IndividualHuntStatisticsDetailScreen"
+                    component={IndividualHuntStatisticsDetailScreen}
+                />
+                <RootStack.Screen
+                    name="IndividualHuntListStatisticsScreen"
+                    component={IndividualHuntListStatisticsScreen}
+                />
+                <RootStack.Screen name="SpeciesStatisticsDetailScreen" component={SpeciesStatisticsDetailScreen} />
+                <RootStack.Screen name="SpeciesStatisticsScreen" component={SpeciesStatisticsScreen} />
+                <RootStack.Screen name="SpeciesStatisticsListScreen" component={SpeciesStatisticsListScreen} />
                 <RootStack.Screen name="ProfileScreen" component={ProfileScreen} />
                 <RootStack.Screen name="EditProfileScreen" component={EditProfileScreen} />
                 <RootStack.Screen name="ReportListScreen" component={ReportListScreen} />

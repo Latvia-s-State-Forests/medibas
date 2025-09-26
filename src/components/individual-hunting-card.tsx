@@ -10,7 +10,7 @@ export type IndividualHuntCardStatus = "seen" | "declined" | "waiting-for-approv
 
 type IndividualHuntingCardProps = {
     date: string;
-    hunterName: string;
+    hunterName?: string;
     title: string;
     disabled?: boolean;
     onPress: () => void;
@@ -48,7 +48,13 @@ export function IndividualHuntingCard(props: IndividualHuntingCardProps) {
                         </Text>
                         <Spacer size={7} />
                         <Text numberOfLines={1}>
-                            {props.date}, {props.hunterName}
+                            {props.hunterName ? (
+                                <>
+                                    {props.date}, {props.hunterName}
+                                </>
+                            ) : (
+                                props.date
+                            )}
                         </Text>
                     </View>
                 </View>

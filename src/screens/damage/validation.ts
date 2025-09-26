@@ -8,6 +8,7 @@ import {
     TreeSpeciesId,
 } from "~/types/classifiers";
 import { DamageState, ForestDamageState, InfrastructureDamageState, LandDamageState } from "~/types/damage";
+import { isValidNumberValue } from "~/utils/is-valid-number-value";
 import { isLandDamageAreaVisible } from "./is-land-damage-area-visible";
 import { isLandDamageCountVisible } from "./is-land-damage-count-visible";
 
@@ -52,8 +53,13 @@ export function getLandDamageValidationErrors(land: LandDamageState, classifiers
         land.subtype ?? 0,
         classifiers.agriculturalTypes?.options ?? []
     );
-    if (isAreaVisible && !land.area) {
-        errors.push(getErrorMessage(i18n.t("damage.land.area")));
+    if (isAreaVisible) {
+        if (!land.area) {
+            errors.push(getErrorMessage(i18n.t("damage.land.area")));
+        }
+        if (!isValidNumberValue(land.area)) {
+            errors.push(i18n.t("validation.invalidNumber", { fieldName: i18n.t("damage.land.area") }));
+        }
     }
 
     const isCountVisible = isLandDamageCountVisible(
@@ -81,6 +87,10 @@ export function getForestDamageValidationErrors({
     const errors: string[] = [];
     if (!area) {
         errors.push(getErrorMessage(i18n.t("damage.forest.area")));
+    }
+
+    if (!isValidNumberValue(area)) {
+        errors.push(i18n.t("validation.invalidNumber", { fieldName: i18n.t("damage.forest.area") }));
     }
 
     if (!standProtection) {

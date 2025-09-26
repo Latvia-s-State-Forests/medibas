@@ -32,7 +32,7 @@ export function CheckboxButtonGrid({
             onChange(checkedValues.concat(value));
         }
     }
-    const rows: JSX.Element[] = [];
+    const rows: React.JSX.Element[] = [];
     for (let i = 0; i < options.length; i += 2) {
         const option1 = options[i];
         const option2 = options[i + 1];

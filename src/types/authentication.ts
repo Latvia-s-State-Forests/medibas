@@ -1,4 +1,4 @@
-import { InterpreterFrom } from "xstate";
+import { ActorRefFrom } from "xstate";
 import { z } from "zod";
 import { authenticationMachine } from "../machines/authentication-machine";
 
@@ -26,4 +26,4 @@ export const accountDeletionSchema = z.object({
 
 export type PendingSession = z.infer<typeof pendingSessionSchema>;
 
-export type AuthenticationService = InterpreterFrom<typeof authenticationMachine>;
+export type AuthenticationService = ActorRefFrom<typeof authenticationMachine>;

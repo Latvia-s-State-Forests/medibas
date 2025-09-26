@@ -26,7 +26,7 @@ export function TypeField<T extends string | number>({ label, options, value, on
             const margin = index !== 0 && styles.marginLeft;
             return (
                 <View key={option.value.toString()} style={[styles.optionContainer, margin]}>
-                    <Option
+                    <TypeFieldOption
                         badgeCount={option.badgeCount}
                         iconName={option.iconName}
                         label={option.label}
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     },
 });
 
-type OptionProps = {
+type TypeFieldOptionProps = {
     label: string;
     onPress: () => void;
     iconName: LargeIconName;
@@ -70,7 +70,7 @@ type OptionProps = {
     active: boolean;
 };
 
-function Option({ label, onPress, iconName, active, disabled, badgeCount }: OptionProps) {
+function TypeFieldOption({ label, onPress, iconName, active, disabled, badgeCount }: TypeFieldOptionProps) {
     return (
         <View style={optionStyles.container}>
             <CardButton

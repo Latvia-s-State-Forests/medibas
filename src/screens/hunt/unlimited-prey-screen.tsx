@@ -2,7 +2,8 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as Crypto from "expo-crypto";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "~/components/button";
 import { CheckboxButton } from "~/components/checkbox-button";
@@ -36,7 +37,7 @@ export function UnlimitedPreyScreen({ navigation, route }: UnlimitedPreyScreenPr
     const { t } = useTranslation();
     const reports = useReportsContext();
     const userStorage = useUserStorage();
-    const scrollViewRef = React.useRef<ScrollView>(null);
+    const scrollViewRef = React.useRef<React.ComponentRef<typeof KeyboardAwareScrollView>>(null);
 
     const [unlimitedPrey, setUnlimitedPrey] = React.useState<UnlimitedPreyState>(() => {
         if (route.params.initialState) {
@@ -141,7 +142,8 @@ export function UnlimitedPreyScreen({ navigation, route }: UnlimitedPreyScreenPr
     return (
         <View style={styles.container}>
             <Header title={formatLabel(speciesClassifier?.description)} />
-            <ScrollView
+            <KeyboardAwareScrollView
+                bottomOffset={Platform.select({ ios: 24, android: 48 })}
                 ref={scrollViewRef}
                 contentContainerStyle={{
                     paddingLeft: insets.left + 16,
@@ -212,7 +214,7 @@ export function UnlimitedPreyScreen({ navigation, route }: UnlimitedPreyScreenPr
                 ) : null}
                 <Spacer size={hasValidationErrors ? 24 : 12} />
                 <Button onPress={onSaveButtonPress} title={t("hunt.submit")} disabled={hasValidationErrors} />
-            </ScrollView>
+            </KeyboardAwareScrollView>
         </View>
     );
 }

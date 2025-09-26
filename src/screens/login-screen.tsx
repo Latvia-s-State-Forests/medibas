@@ -1,3 +1,4 @@
+import { useSelector } from "@xstate/react";
 import * as WebBrowser from "expo-web-browser";
 import * as React from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -7,13 +8,12 @@ import { CheckboxButton } from "~/components/checkbox-button";
 import { ScreenBackgroundLayout } from "~/components/screen-background-layout";
 import { Spacer } from "~/components/spacer";
 import { Text } from "~/components/text";
-import { useAuth } from "~/machines/authentication-machine";
+import { authenticationActor } from "~/machines/authentication-machine";
 import { theme } from "~/theme";
 import { LoadingScreen } from "./loading-screen";
 
 export function LoginScreen() {
     const { t } = useTranslation();
-    const [state, send] = useAuth();
     const [checked, setChecked] = React.useState(false);
     const [isTermsAndConditionsPressed, setIsTermsAndConditionsPressed] = React.useState(false);
     const [isPrivacyPolicyPressed, setIsPrivacyPolicyPressed] = React.useState(false);
@@ -37,14 +37,16 @@ export function LoginScreen() {
     }
 
     function onLoginButtonPress() {
-        send("LOGIN");
+        authenticationActor.send({ type: "LOGIN" });
     }
 
     function onRegisterButtonPress() {
-        send("REGISTER");
+        authenticationActor.send({ type: "REGISTER" });
     }
 
-    if (!state.matches("loggedOut.idle")) {
+    const isLoggedOutIdle = useSelector(authenticationActor, (state) => state.matches({ loggedOut: "idle" }));
+
+    if (!isLoggedOutIdle) {
         return <LoadingScreen />;
     }
 

@@ -1,7 +1,8 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Header } from "~/components/header";
 import { TypeField } from "~/components/type-field";
@@ -36,7 +37,8 @@ export function IndividualHuntFormScreen({ route }: IndividualHuntScreeFormProps
     return (
         <View style={styles.container}>
             <Header title={t("hunt.individualHunt.hunt")} />
-            <ScrollView
+            <KeyboardAwareScrollView
+                bottomOffset={Platform.select({ ios: 24, android: 48 })}
                 contentContainerStyle={[
                     styles.body,
                     {
@@ -71,7 +73,7 @@ export function IndividualHuntFormScreen({ route }: IndividualHuntScreeFormProps
                 <View style={styles.innerContainer}>
                     <IndividualHuntForm huntPlace={individualHunt.type} hunt={route.params?.hunt} />
                 </View>
-            </ScrollView>
+            </KeyboardAwareScrollView>
         </View>
     );
 }

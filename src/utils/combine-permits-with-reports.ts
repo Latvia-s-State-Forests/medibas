@@ -1,4 +1,4 @@
-import produce from "immer";
+import { produce } from "immer";
 import { HuntedTypeId, PermitAllowanceClassifierOption } from "~/types/classifiers";
 import { Permit, StrapStatusId } from "~/types/permits";
 import { FeatureLayer, Report } from "~/types/report";

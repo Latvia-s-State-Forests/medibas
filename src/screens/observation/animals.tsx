@@ -14,7 +14,7 @@ import { AnimalsItemState } from "~/types/observations";
 import { getActiveClassifiers } from "~/utils/filter-classifiers";
 
 interface AnimalsProps {
-    scrollViewRef: React.RefObject<ScrollView>;
+    scrollViewRef: React.RefObject<ScrollView | null>;
     animals: AnimalsItemState[];
     onChange: (update: (animals: AnimalsItemState[]) => AnimalsItemState[]) => void;
 }
@@ -165,7 +165,7 @@ export function Animals(props: AnimalsProps) {
             )}
 
             <DeleteConfirmationModal
-                visible={itemToDelete != undefined}
+                visible={itemToDelete !== undefined}
                 title={t("observations.deleteAnimalsItem.title")}
                 onCancel={onCancelDeleteItem}
                 onClose={onCancelDeleteItem}

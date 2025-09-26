@@ -1,4 +1,3 @@
-import { Position } from "geojson";
 import { Feature } from "./features";
 
 export enum MapPane {
@@ -7,7 +6,7 @@ export enum MapPane {
 }
 
 export type MapPosition = {
-    center: Position;
+    center: GeoJSON.Position;
     zoom: number;
 };
 
@@ -61,7 +60,8 @@ export interface MapServiceCustom extends MapServiceBase {
         | "district-hunted-red-deer"
         | "district-hunted-moose"
         | "district-hunted-roe-deer"
-        | "district-hunted-boar";
+        | "district-hunted-boar"
+        | "district-hunted-others-unlimited";
 }
 
 export interface MapServiceCustomWithFeatures extends MapServiceCustom {

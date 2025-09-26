@@ -1,0 +1,18 @@
+import * as React from "react";
+import Svg, { Path } from "react-native-svg";
+import { Color, theme } from "~/theme";
+
+type MediumHuntTargetIconProps = {
+    width?: number;
+    height?: number;
+    color?: Color;
+};
+
+export function MediumHuntTargetIcon({ width = 24, height = 24, color = "gray8" }: MediumHuntTargetIconProps) {
+    const fillColor = theme.color[color as keyof typeof theme.color];
+    return (
+        <Svg width={width} height={height} viewBox="0 0 24 24" fill={fillColor}>
+            <Path d="M13 18.566V17.399C13 16.847 12.553 16.399 12 16.399C11.447 16.399 11 16.847 11 17.399V18.566C8.134 18.131 5.868 15.865 5.434 13H6.6C7.152 13 7.6 12.552 7.6 12C7.6 11.447 7.152 11 6.6 11H5.434C5.868 8.134 8.134 5.868 11 5.433V6.6C11 7.152 11.447 7.6 12 7.6C12.553 7.6 13 7.152 13 6.6V5.433C15.866 5.868 18.132 8.134 18.566 11H17.4C16.848 11 16.4 11.447 16.4 12C16.4 12.552 16.848 13 17.4 13H18.566C18.132 15.865 15.866 18.131 13 18.566ZM21 11H20.588C20.128 7.029 16.971 3.872 13 3.412V3C13 2.447 12.553 2 12 2C11.447 2 11 2.447 11 3V3.412C7.029 3.872 3.872 7.029 3.412 11H3C2.447 11 2 11.447 2 12C2 12.552 2.447 13 3 13H3.412C3.872 16.97 7.029 20.127 11 20.587V21C11 21.552 11.447 22 12 22C12.553 22 13 21.552 13 21V20.587C16.971 20.127 20.128 16.97 20.588 13H21C21.553 13 22 12.552 22 12C22 11.447 21.553 11 21 11ZM12 11C11.448 11 11 11.448 11 12C11 12.552 11.448 13 12 13C12.553 13 13 12.552 13 12C13 11.448 12.553 11 12 11Z" />
+        </Svg>
+    );
+}

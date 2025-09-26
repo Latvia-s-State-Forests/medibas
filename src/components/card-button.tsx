@@ -1,12 +1,12 @@
 import * as React from "react";
-import { Platform, Pressable, StyleSheet, StyleProp, ViewStyle, View } from "react-native";
+import { Platform, Pressable, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 import { Badge } from "~/components/badge";
-import { LargeIcon, IconName } from "~/components/icon";
+import { LargeIcon, LargeIconName } from "~/components/icon";
 import { Text } from "~/components/text";
 import { theme } from "~/theme";
 
 type CardButtonProps = {
-    iconName: IconName<32>;
+    iconName: LargeIconName;
     onPress: () => void;
     disabled?: boolean;
     radius?: "small" | "medium";
@@ -32,8 +32,8 @@ export function CardButton({
             ? styles.activePressed
             : styles.active
         : isPressed
-        ? styles.lightGray
-        : styles.shadow;
+          ? styles.lightGray
+          : styles.shadow;
     return (
         <Pressable
             onPress={onPress}

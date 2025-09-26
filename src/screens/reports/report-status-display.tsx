@@ -72,7 +72,7 @@ export function ReportStatusDisplay(props: ReportStatusDisplayProps) {
                     }
 
                     return errorMessage ?? defaultErrorMessage;
-                } catch (error) {
+                } catch {
                     return defaultErrorMessage;
                 }
             })

@@ -1,10 +1,10 @@
-import i18next from "i18next";
+import { i18n } from "~/i18n";
 import { ClassifierOptionDescription } from "~/types/classifiers";
 
 export function formatLabel(description: ClassifierOptionDescription | undefined): string {
     if (!description) {
-        return i18next.t("missingLabel");
+        return i18n.t("missingLabel");
     } else {
-        return description[i18next.language as "lv" | "en" | "ru"] ?? description.lv ?? i18next.t("missingLabel");
+        return description[i18n.language as "lv" | "en" | "ru"] ?? description.lv ?? i18n.t("missingLabel");
     }
 }

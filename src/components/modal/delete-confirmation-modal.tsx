@@ -48,7 +48,8 @@ export function DeleteConfirmationModal({
     return (
         <Modal visible={visible} onClose={onClose}>
             <View style={styles.center}>
-                <LargestIcon style={styles.icon} name="delete" />
+                <LargestIcon name="delete" />
+                <Spacer size={38} />
                 <Text size={22} weight="bold" style={styles.text}>
                     {title}
                 </Text>
@@ -79,9 +80,6 @@ const styles = StyleSheet.create({
     center: {
         justifyContent: "center",
         alignItems: "center",
-    },
-    icon: {
-        marginBottom: 38,
     },
     text: {
         textAlign: "center",

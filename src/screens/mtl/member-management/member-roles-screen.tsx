@@ -1,12 +1,12 @@
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useInterpret } from "@xstate/react";
+import { useActorRef } from "@xstate/react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { match } from "ts-pattern";
-import { ActorRefFrom, assign, createMachine } from "xstate";
+import { ActorRefFrom, assign, fromCallback, setup } from "xstate";
 import { UpdateMemberRolesBody as UpdateMemberBody, api } from "~/api";
 import { Button } from "~/components/button";
 import { Checkbox } from "~/components/checkbox-button";
@@ -28,7 +28,16 @@ type MemberRolesScreenProps = NativeStackScreenProps<RootNavigatorParams, "Membe
 export function MemberRolesScreen(props: MemberRolesScreenProps) {
     const { t } = useTranslation();
     const insets = useSafeAreaInsets();
-    const service = useInterpret(() => updateMemberRolesMachine);
+    const actor = useActorRef(updateMemberRolesMachine, {
+        inspect: (inspectEvent) => {
+            if (inspectEvent.type === "@xstate.snapshot") {
+                const snapshot = inspectEvent.actorRef?.getSnapshot();
+                if (snapshot?.machine?.id === updateMemberRolesMachine.id) {
+                    logger.log("UMR " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event));
+                }
+            }
+        },
+    });
 
     const { member, districtId, mode } = props.route.params;
 
@@ -72,7 +81,7 @@ export function MemberRolesScreen(props: MemberRolesScreenProps) {
             remove,
         };
 
-        service.send({ type: "UPDATE_ROLES", payload });
+        actor.send({ type: "UPDATE_ROLES", payload });
     }
 
     return (
@@ -138,7 +147,7 @@ export function MemberRolesScreen(props: MemberRolesScreenProps) {
                 ) : null}
             </View>
 
-            <UpdateMemberRolesStatusDialog service={service} />
+            <UpdateMemberRolesStatusDialog actor={actor} />
         </View>
     );
 }
@@ -154,140 +163,139 @@ const styles = StyleSheet.create({
     },
 });
 
-const updateMemberRolesMachine = createMachine(
-    {
-        id: "updateMemberRoles",
-        schema: {
-            events: {} as
-                | { type: "UPDATE_ROLES"; payload: UpdateMemberBody }
-                | { type: "UPDATE_ROLES_SUCCESS" }
-                | { type: "UPDATE_ROLES_FAILURE" }
-                | { type: "UPDATE_MEMBERSHIPS_SUCCESS" }
-                | { type: "UPDATE_MEMBERSHIPS_FAILURE" }
-                | { type: "RESET" }
-                | NetworkStatusEvent,
-            context: {} as { payload?: UpdateMemberBody },
-        },
-        initial: "idle",
-        states: {
-            idle: {
-                on: {
-                    UPDATE_ROLES: { target: "verifyingNetworkConnection", actions: ["setPayload"] },
-                },
-            },
+type UpdateMemberRolesEvent =
+    | { type: "UPDATE_ROLES"; payload: UpdateMemberBody }
+    | { type: "UPDATE_ROLES_SUCCESS" }
+    | { type: "UPDATE_ROLES_FAILURE" }
+    | { type: "UPDATE_MEMBERSHIPS_SUCCESS" }
+    | { type: "UPDATE_MEMBERSHIPS_FAILURE" }
+    | { type: "RESET" }
+    | NetworkStatusEvent;
 
-            verifyingNetworkConnection: {
-                invoke: { src: networkStatusMachine },
-                on: {
-                    NETWORK_AVAILABLE: { target: "updatingMemberRoles" },
-                    NETWORK_UNAVAILABLE: { target: "networkFailure" },
-                },
-            },
-
-            updatingMemberRoles: {
-                invoke: { src: "updateMemberRoles" },
-                on: {
-                    UPDATE_ROLES_SUCCESS: { target: "updatingMemberships" },
-                    UPDATE_ROLES_FAILURE: { target: "otherFailure" },
-                },
-            },
-
-            updatingMemberships: {
-                invoke: { src: "updateMemberships" },
-                on: {
-                    UPDATE_MEMBERSHIPS_SUCCESS: { target: "success" },
-                    UPDATE_MEMBERSHIPS_FAILURE: { target: "otherFailure" },
-                },
-            },
-
-            success: {
-                type: "final",
-            },
-
-            networkFailure: {
-                on: {
-                    RESET: { target: "idle", actions: ["resetPayload"] },
-                },
-            },
-
-            otherFailure: {
-                on: {
-                    RESET: { target: "idle", actions: ["resetPayload"] },
-                },
-            },
-        },
-        preserveActionOrder: true,
-        predictableActionArguments: true,
+const updateMemberRolesMachine = setup({
+    types: {
+        events: {} as UpdateMemberRolesEvent,
+        context: {} as { payload?: UpdateMemberBody },
     },
-    {
-        actions: {
-            setPayload: assign({
-                payload: (context, event) => {
-                    if (event.type !== "UPDATE_ROLES") {
-                        return context.payload;
-                    }
-                    return event.payload;
-                },
-            }),
-            resetPayload: assign({
-                payload: undefined,
-            }),
-        },
-        services: {
-            updateMemberRoles: (context) => async (send) => {
-                if (!context.payload) {
+    actions: {
+        setPayload: assign({
+            payload: ({ context, event }) => {
+                if (event.type !== "UPDATE_ROLES") {
+                    return context.payload;
+                }
+                return event.payload;
+            },
+        }),
+        resetPayload: assign({
+            payload: undefined,
+        }),
+    },
+    actors: {
+        updateMemberRoles: fromCallback(
+            ({
+                sendBack,
+                input,
+            }: {
+                sendBack: (event: UpdateMemberRolesEvent) => void;
+                input: { payload?: UpdateMemberBody };
+            }) => {
+                const payload = input?.payload;
+                if (!payload) {
                     logger.error("Failed to update member roles, payload is missing");
-                    send({ type: "UPDATE_ROLES_FAILURE" });
+                    sendBack({ type: "UPDATE_ROLES_FAILURE" });
                     return;
                 }
 
-                try {
-                    await api.updateMemberRoles(context.payload);
-                    send({ type: "UPDATE_ROLES_SUCCESS" });
-                } catch (error) {
-                    logger.error("Failed to update member roles", error);
-                    send({ type: "UPDATE_ROLES_FAILURE" });
-                }
-            },
-            updateMemberships: () => async (send) => {
-                try {
-                    await queryClient.refetchQueries(queryKeys.memberships, undefined, { throwOnError: true });
-                    send({ type: "UPDATE_MEMBERSHIPS_SUCCESS" });
-                } catch (error) {
+                api.updateMemberRoles(payload)
+                    .then(() => {
+                        sendBack({ type: "UPDATE_ROLES_SUCCESS" });
+                    })
+                    .catch((error) => {
+                        logger.error("Failed to update member roles", error);
+                        sendBack({ type: "UPDATE_ROLES_FAILURE" });
+                    });
+            }
+        ),
+        updateMemberships: fromCallback(({ sendBack }: { sendBack: (event: UpdateMemberRolesEvent) => void }) => {
+            queryClient
+                .refetchQueries({ queryKey: queryKeys.memberships }, { throwOnError: true })
+                .then(() => {
+                    sendBack({ type: "UPDATE_MEMBERSHIPS_SUCCESS" });
+                })
+                .catch((error) => {
                     logger.error("Failed to update memberships", error);
-                    send({ type: "UPDATE_MEMBERSHIPS_FAILURE" });
-                }
+                    sendBack({ type: "UPDATE_MEMBERSHIPS_FAILURE" });
+                });
+        }),
+    },
+}).createMachine({
+    id: "updateMemberRoles",
+    initial: "idle",
+    states: {
+        idle: {
+            on: {
+                UPDATE_ROLES: { target: "verifyingNetworkConnection", actions: ["setPayload"] },
             },
         },
-    }
-);
+
+        verifyingNetworkConnection: {
+            invoke: { src: networkStatusMachine },
+            on: {
+                NETWORK_AVAILABLE: { target: "updatingMemberRoles" },
+                NETWORK_UNAVAILABLE: { target: "networkFailure" },
+            },
+        },
+
+        updatingMemberRoles: {
+            invoke: {
+                src: "updateMemberRoles",
+                input: ({ context }) => ({ payload: context.payload }),
+            },
+            on: {
+                UPDATE_ROLES_SUCCESS: { target: "updatingMemberships" },
+                UPDATE_ROLES_FAILURE: { target: "otherFailure" },
+            },
+        },
+
+        updatingMemberships: {
+            invoke: { src: "updateMemberships" },
+            on: {
+                UPDATE_MEMBERSHIPS_SUCCESS: { target: "success" },
+                UPDATE_MEMBERSHIPS_FAILURE: { target: "otherFailure" },
+            },
+        },
+
+        success: {
+            type: "final",
+        },
+
+        networkFailure: {
+            on: {
+                RESET: { target: "idle", actions: ["resetPayload"] },
+            },
+        },
+
+        otherFailure: {
+            on: {
+                RESET: { target: "idle", actions: ["resetPayload"] },
+            },
+        },
+    },
+});
 
 type UpdateMemberRolesStatusDialogProps = {
-    service: ActorRefFrom<typeof updateMemberRolesMachine>;
+    actor: ActorRefFrom<typeof updateMemberRolesMachine>;
 };
 
-function UpdateMemberRolesStatusDialog({ service }: UpdateMemberRolesStatusDialogProps) {
+function UpdateMemberRolesStatusDialog({ actor }: UpdateMemberRolesStatusDialogProps) {
     const { t } = useTranslation();
     const navigation = useNavigation();
     const [visible, setVisible] = React.useState(false);
     const [status, setStatus] = React.useState<"loading" | "success" | "networkFailure" | "otherFailure">("loading");
 
     React.useEffect(() => {
-        const subscription = service.subscribe((state) => {
-            const message = "UMR " + JSON.stringify(state.value) + " " + JSON.stringify(state.event);
-            logger.log(message);
-        });
-
-        return () => subscription.unsubscribe();
-    }, [service]);
-
-    React.useEffect(() => {
-        const subscription = service.subscribe((state) => {
-            if (
-                state.matches("verifyingNetworkConnection") ||
-                state.matches("registeringMember") ||
-                state.matches("updatingMemberships")
-            ) {
+        const subscription = actor.subscribe((state) => {
+            if (state.matches("verifyingNetworkConnection") || state.matches("updatingMemberships")) {
                 setVisible(true);
                 setStatus("loading");
             } else if (state.matches("success")) {
@@ -305,7 +313,7 @@ function UpdateMemberRolesStatusDialog({ service }: UpdateMemberRolesStatusDialo
         });
 
         return () => subscription.unsubscribe();
-    }, [service]);
+    }, [actor]);
 
     return match(status)
         .with("loading", () => (
@@ -326,7 +334,10 @@ function UpdateMemberRolesStatusDialog({ service }: UpdateMemberRolesStatusDialo
                 title={t("mtl.memberRoles.networkFailure.title")}
                 description={t("mtl.memberRoles.networkFailure.description")}
                 buttons={
-                    <Button title={t("mtl.memberRoles.networkFailure.close")} onPress={() => service.send("RESET")} />
+                    <Button
+                        title={t("mtl.memberRoles.networkFailure.close")}
+                        onPress={() => actor.send({ type: "RESET" })}
+                    />
                 }
             />
         ))
@@ -336,7 +347,10 @@ function UpdateMemberRolesStatusDialog({ service }: UpdateMemberRolesStatusDialo
                 icon="failure"
                 title={t("mtl.memberRoles.otherFailure.title")}
                 buttons={
-                    <Button title={t("mtl.memberRoles.otherFailure.close")} onPress={() => service.send("RESET")} />
+                    <Button
+                        title={t("mtl.memberRoles.otherFailure.close")}
+                        onPress={() => actor.send({ type: "RESET" })}
+                    />
                 }
             />
         ))

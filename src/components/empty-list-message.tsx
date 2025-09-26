@@ -1,10 +1,10 @@
 import { StyleSheet, View } from "react-native";
-import { IconName, MediumIcon } from "./icon";
+import { MediumIcon, MediumIconName } from "./icon";
 import { Spacer } from "./spacer";
 import { Text } from "./text";
 
 type EmptyListMessageProps = {
-    icon: IconName<24>;
+    icon: MediumIconName;
     label: string;
 };
 

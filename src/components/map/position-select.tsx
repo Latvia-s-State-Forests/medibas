@@ -1,4 +1,4 @@
-import { useActor, useInterpret, useSelector } from "@xstate/react";
+import { useActorRef, useSelector } from "@xstate/react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { Modal, Pressable, StatusBar, StyleSheet, View } from "react-native";
@@ -8,7 +8,7 @@ import { configuration } from "~/configuration";
 import { useConfig } from "~/hooks/use-config";
 import { useDistricts } from "~/hooks/use-districts";
 import { fetchPositionMachine } from "~/machines/fetch-position-machine";
-import { mapService } from "~/machines/map-machine";
+import { mapActor } from "~/machines/map-machine";
 import { theme } from "~/theme";
 import { Button } from "../button";
 import { Dialog } from "../dialog";
@@ -19,21 +19,21 @@ const MARKER_ZOOM = 16;
 
 const { bounds, minZoom, maxZoom, services, serviceGroups } = configuration.map;
 
-type CurrentPositionIdleProps = {
+type PositionSelectProps = {
     onMark: (position: GeoJSON.Position) => void;
     position: GeoJSON.Position | null;
     positionType: "individualHunt" | "drivenHunt" | "infrastructure";
-    activeDistrictId: number | undefined;
+    activeDistrictIds: number[] | undefined;
 };
 
-export function PositionSelect({ onMark, position, positionType, activeDistrictId }: CurrentPositionIdleProps) {
+export function PositionSelect({ onMark, position, positionType, activeDistrictIds }: PositionSelectProps) {
     const { t } = useTranslation();
     const config = useConfig();
     const insets = useSafeAreaInsets();
     const districts = useDistricts();
     const embeddedMapRef = React.useRef<MapHandle>(null);
     const fullscreenMapRef = React.useRef<MapHandle>(null);
-    const [layerState] = useActor(mapService);
+    const layerContext = useSelector(mapActor, (state) => state.context);
     const [mapOpen, setMapOpen] = React.useState(false);
     const [mapOpenForEditing, setMapOpenForEditing] = React.useState(false);
     const [fullScreenMapLoaded, setFullScreenMapLoaded] = React.useState(false);
@@ -60,36 +60,38 @@ export function PositionSelect({ onMark, position, positionType, activeDistrictI
         }
 
         // Check which base maps are currently active in layer state
-        const activeBaseMaps = layerState.context.activeLayerIds.filter((id) => baseMapServiceIds.has(id));
+        const activeBaseMaps = layerContext.activeLayerIds.filter((id) => baseMapServiceIds.has(id));
 
         return [...activeBaseMaps, "districts"];
-    }, [layerState.context.activeLayerIds]);
+    }, [layerContext.activeLayerIds]);
 
     const [mapViewPosition, setMapViewPosition] = React.useState<
         { center: GeoJSON.Position; zoom?: number } | undefined
     >(undefined);
 
-    const fetchPositionActor = useInterpret(() => fetchPositionMachine, {
-        context: { config },
-        actions: {
-            onPositionSuccess: (context, event) => {
-                if (event.type === "POSITION_SUCCESS") {
-                    let zoom: number;
-                    if (mapViewPosition?.zoom && mapViewPosition.zoom >= MARKER_ZOOM) {
-                        zoom = mapViewPosition.zoom;
-                    } else {
-                        zoom = MARKER_ZOOM;
+    const fetchPositionActor = useActorRef(
+        fetchPositionMachine.provide({
+            actions: {
+                onPositionSuccess: ({ event }) => {
+                    if (event.type === "POSITION_SUCCESS") {
+                        let zoom: number;
+                        if (mapViewPosition?.zoom && mapViewPosition.zoom >= MARKER_ZOOM) {
+                            zoom = mapViewPosition.zoom;
+                        } else {
+                            zoom = MARKER_ZOOM;
+                        }
+                        fullscreenMapRef.current?.sendAction({
+                            type: "setPosition",
+                            center: [event.position.longitude, event.position.latitude],
+                            zoom,
+                            animated: true,
+                        });
                     }
-                    fullscreenMapRef.current?.sendAction({
-                        type: "setPosition",
-                        center: [event.position.longitude, event.position.latitude],
-                        zoom,
-                        animated: true,
-                    });
-                }
+                },
             },
-        },
-    });
+        }),
+        { input: { config } }
+    );
 
     const [dialog, setDialog] = React.useState<{ visible: boolean; type: "loading" | "failure" }>({
         visible: false,
@@ -150,14 +152,24 @@ export function PositionSelect({ onMark, position, positionType, activeDistrictI
         embeddedMapRef.current?.sendAction({
             type: "setDistricts",
             districts,
-            activeDistrictId,
+            activeDistrictIds,
         });
         fullscreenMapRef.current?.sendAction({
             type: "setDistricts",
             districts,
-            activeDistrictId,
+            activeDistrictIds,
         });
-    }, [districts, activeDistrictId]);
+    }, [districts, activeDistrictIds]);
+
+    function setDistrictsIfAvailable(mapRef: React.RefObject<MapHandle | null>) {
+        if (districts.length && activeDistrictIds?.length) {
+            mapRef.current?.sendAction({
+                type: "setDistricts",
+                districts,
+                activeDistrictIds,
+            });
+        }
+    }
 
     async function onLoadEmbeddedMap() {
         setEmbeddedMapLoaded(true);
@@ -179,8 +191,10 @@ export function PositionSelect({ onMark, position, positionType, activeDistrictI
             minZoom,
             maxZoom,
             locationPinEnabled: !!position,
-            activeDistrict: activeDistrictId,
         });
+
+        // Set districts immediately after initialization if available
+        setDistrictsIfAvailable(embeddedMapRef);
     }
 
     async function onLoadFullScreenMap() {
@@ -203,8 +217,10 @@ export function PositionSelect({ onMark, position, positionType, activeDistrictI
             minZoom,
             maxZoom,
             locationPinEnabled: !!position && !mapOpenForEditing,
-            activeDistrict: activeDistrictId,
         });
+
+        // Set districts immediately after initialization if available
+        setDistrictsIfAvailable(fullscreenMapRef);
     }
 
     function onModalClose() {
@@ -275,7 +291,7 @@ export function PositionSelect({ onMark, position, positionType, activeDistrictI
                         ref={fullscreenMapRef}
                         onViewPositionChanged={onMapViewPositionChanged}
                     />
-                    {positionType === "infrastructure" && mapOpenForEditing ? (
+                    {positionType !== "drivenHunt" && mapOpenForEditing ? (
                         <View
                             style={[
                                 styles.locationTrackingButton,

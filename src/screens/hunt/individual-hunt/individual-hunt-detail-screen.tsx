@@ -10,13 +10,12 @@ import { ActionButton } from "~/components/action-button";
 import { Button } from "~/components/button";
 import { CheckboxList } from "~/components/checkbox-button-list";
 import { ConfirmRejectIndividualHunt } from "~/components/confirm-reject-individual-hunt";
-import { useConfirmationDialog } from "~/components/confirmation-dialog-provider";
 import { Dialog } from "~/components/dialog";
 import { ErrorMessage } from "~/components/error-message";
 import { Header } from "~/components/header";
 import { useHuntActivitiesContext } from "~/components/hunt-activities-provider";
 import { SmallIcon, SmallIconName } from "~/components/icon";
-import { NavigationButton } from "~/components/navigation-button";
+import { NavigationButtonField } from "~/components/navigation-button-field";
 import { ReadOnlyField } from "~/components/read-only-field";
 import { Spacer } from "~/components/spacer";
 import { Text } from "~/components/text";
@@ -24,13 +23,16 @@ import { configuration } from "~/configuration";
 import { useClassifiers } from "~/hooks/use-classifiers";
 import { useHunt } from "~/hooks/use-hunt";
 import { usePermissions } from "~/hooks/use-permissions";
-import { DEFAULT_APP_LANGUAGE, getAppLanguage } from "~/i18n";
+import { getAppLanguage } from "~/i18n";
 import { logger } from "~/logger";
 import { Color, theme } from "~/theme";
 import { HuntActivityType } from "~/types/hunt-activities";
 import { Hunt, HuntEventStatus, HuntPlace } from "~/types/hunts";
 import { RootNavigatorParams } from "~/types/navigation";
 import { formatDate } from "~/utils/format-date-time";
+import { formatIndividualHuntDogs } from "~/utils/format-individual-hunt-dogs";
+import { EQUIPMENT_CONFIG, getEquipmentData, getEquipmentTranslations } from "~/utils/format-individual-hunt-equipment";
+import { formatIndividualHuntHuntedSpecies } from "~/utils/format-individual-hunt-hunted-species";
 import { formatPosition } from "~/utils/format-position";
 import { getEquipmentStatus } from "~/utils/individual-hunt-equipment";
 import { HuntLocationViewer } from "../driven-hunt/hunt-location-viewer";
@@ -46,9 +48,14 @@ type IndividualHuntDetailScreenProps = NativeStackScreenProps<RootNavigatorParam
 export function IndividualHuntDetailScreen({ navigation, route }: IndividualHuntDetailScreenProps) {
     const hunt = useHunt(route.params.huntId);
 
+    React.useEffect(() => {
+        if (!hunt) {
+            logger.error(`Individual hunt with id ${route.params.huntId} not available`);
+            navigation.goBack();
+        }
+    }, [hunt, navigation, route.params.huntId]);
+
     if (!hunt) {
-        logger.error(`Individual hunt with id ${route.params.huntId} not available`);
-        navigation.goBack();
         return null;
     }
 
@@ -68,7 +75,7 @@ function Content({ hunt }: ContentProps) {
     const permissions = usePermissions();
     const classifiers = useClassifiers();
     const locationLabel = `${hunt.vmdCode} ${t("hunt.individualHunt.huntPlace")}`;
-    const { confirm } = useConfirmationDialog();
+    const [showConfirmationDialog, setShowConfirmationDialog] = React.useState(false);
     const [showHuntDialog, setSowHuntDialog] = React.useState(false);
     const equipmentSpecies = hunt.targetSpecies.filter((species) =>
         configuration.hunt.plannedSpeciesUsingEquipment.includes(species.speciesId)
@@ -121,57 +128,12 @@ function Content({ hunt }: ContentProps) {
     const hunterNameAndCardNumber = hunt.hunters?.map((h) => `${h.fullName} ${h.huntersCardNumber}`).join(", ");
 
     const huntedSpecies = React.useMemo(() => {
-        const allSpecies = getPlannedSpeciesOptions(classifiers, language);
-
-        return allSpecies
-            .filter((species) => {
-                return hunt.targetSpecies?.some(
-                    (s) => s.speciesId === species.value.speciesId && s.permitTypeId === species.value.permitTypeId
-                );
-            })
-            .map((species) => species.label)
-            .join(", ");
-    }, [classifiers, language, hunt.targetSpecies]);
+        return formatIndividualHuntHuntedSpecies(hunt.targetSpecies, classifiers, language);
+    }, [hunt.targetSpecies, classifiers, language]);
 
     const huntDogs = React.useMemo(() => {
-        const dogs: string[] = [];
-
-        const breedById = new Map<number, string>();
-        for (const breed of classifiers.dogBreeds.options) {
-            const description = breed.description[language] ?? breed.description[DEFAULT_APP_LANGUAGE] ?? "??";
-            breedById.set(breed.id, description);
-        }
-
-        const subBreedById = new Map<number, string>();
-        for (const subBreed of classifiers.dogSubbreeds.options) {
-            const breed = breedById.get(subBreed.breedId);
-            if (breed) {
-                const description =
-                    subBreed.description[language] ?? subBreed.description[DEFAULT_APP_LANGUAGE] ?? "??";
-                subBreedById.set(subBreed.id, `${breed} (${description})`);
-            }
-        }
-
-        for (const dog of hunt.dogs) {
-            if (dog.dogSubbreedId) {
-                const subBreed = subBreedById.get(dog.dogSubbreedId);
-                if (subBreed) {
-                    dogs.push(`${subBreed} × ${dog.count}`);
-                }
-            } else if (dog.dogBreedOther) {
-                dogs.push(`${t("hunt.individualHunt.otherBreed", { otherBreed: dog.dogBreedOther })} × ${dog.count}`);
-            } else {
-                const breed = breedById.get(dog.dogBreedId);
-                if (breed) {
-                    dogs.push(`${breed} × ${dog.count}`);
-                }
-            }
-        }
-
-        dogs.sort((a, b) => a.localeCompare(b));
-
-        return dogs.join(", ");
-    }, [t, classifiers, language, hunt.dogs]);
+        return formatIndividualHuntDogs(hunt.dogs, classifiers, language, t);
+    }, [hunt.dogs, classifiers, language, t]);
 
     function getStatus(hunt: Hunt): { color: Color; icon: SmallIconName; text: string } | undefined {
         if (hunt.isIndividualHuntApproved) {
@@ -193,37 +155,6 @@ function Content({ hunt }: ContentProps) {
     const canAddEquipment =
         isHunter && hunt.huntEventPlaceId !== HuntPlace.WaterBody && hunt.huntEventStatusId === HuntEventStatus.Active;
 
-    const EQUIPMENT_CONFIG = {
-        isNightVisionUsed: {
-            key: "nightVision",
-            translation: "hunt.equipment.nightVision",
-        },
-        isSemiAutomaticWeaponUsed: {
-            key: "semiAutomatic",
-            translation: "hunt.equipment.semiAutomatic",
-        },
-        isLightSourceUsed: {
-            key: "lightSource",
-            translation: "hunt.equipment.lightSource",
-        },
-        isThermalScopeUsed: {
-            key: "thermalScope",
-            translation: "hunt.equipment.thermalScope",
-        },
-    } as const;
-
-    function getEquipmentData(hunt: Hunt, useTranslation: boolean = false): Array<Equipment | string> {
-        const equipmentData: Array<Equipment | string> = [];
-
-        for (const [huntKey, config] of Object.entries(EQUIPMENT_CONFIG)) {
-            if (hunt[huntKey as keyof Hunt]) {
-                equipmentData.push(useTranslation ? t(config.translation) : config.key);
-            }
-        }
-
-        return equipmentData;
-    }
-
     function getEquipmentKeys(hunt: Hunt): Equipment[] {
         return getEquipmentData(hunt) as Equipment[];
     }
@@ -231,10 +162,6 @@ function Content({ hunt }: ContentProps) {
     const [equipmentList, setEquipmentList] = React.useState<{ equipment: Equipment[] }>({
         equipment: hunt ? getEquipmentKeys(hunt) : [],
     });
-
-    function getEquipmentTranslations(hunt: Hunt): string {
-        return getEquipmentData(hunt, true).join(", ");
-    }
 
     const hasEquipment = equipmentList.equipment.length > 0;
     function onEquipmentChange(equipment: Equipment[]) {
@@ -293,27 +220,27 @@ function Content({ hunt }: ContentProps) {
         });
     }
 
-    async function onSaveAdditionalEquipment(): Promise<void> {
-        const confirmed = await confirm({
-            title: t("hunt.individualHunt.addEquipmentConfirmation.title", {
-                huntCode: hunt.vmdCode,
-            }),
-            confirmButtonTitle: t("hunt.individualHunt.addEquipmentConfirmation.confirm"),
-            rejectButtonTitle: t("hunt.individualHunt.addEquipmentConfirmation.reject"),
+    function onSaveAdditionalEquipment() {
+        setShowConfirmationDialog(true);
+    }
+
+    function onSaveAdditionalEquipmentConfirm() {
+        setShowConfirmationDialog(false);
+        createActivity({
+            type: HuntActivityType.AddSpeciesAndGear,
+            targetSpecies: selectedSpeciesWithEquipmentList,
+            isSemiAutomaticWeaponUsed: isSemiAutomatic,
+            isLightSourceUsed,
+            isNightVisionUsed: isNightVision,
+            isThermalScopeUsed,
+            huntId: hunt.id,
+            huntCode: hunt.vmdCode,
         });
-        if (confirmed) {
-            createActivity({
-                type: HuntActivityType.AddSpeciesAndGear,
-                targetSpecies: selectedSpeciesWithEquipmentList,
-                isSemiAutomaticWeaponUsed: isSemiAutomatic,
-                isLightSourceUsed,
-                isNightVisionUsed: isNightVision,
-                isThermalScopeUsed,
-                huntId: hunt.id,
-                huntCode: hunt.vmdCode,
-            });
-            setShowEquipmentDialog(false);
-        }
+        setShowEquipmentDialog(false);
+    }
+
+    function onSaveAdditionalEquipmentReject() {
+        setShowConfirmationDialog(false);
     }
 
     return (
@@ -370,29 +297,33 @@ function Content({ hunt }: ContentProps) {
                                 latitude={hunt.meetingPointY}
                                 longitude={hunt.meetingPointX}
                             />
-                            <View style={styles.navigation}>
-                                <ReadOnlyField
-                                    label={t("hunt.individualHunt.locationCoordinates")}
-                                    value={formatPosition({
-                                        latitude: hunt.meetingPointY,
-                                        longitude: hunt.meetingPointX,
-                                    })}
-                                />
-                                <NavigationButton
-                                    latitude={hunt.meetingPointY}
-                                    longitude={hunt.meetingPointX}
-                                    locationLabel={locationLabel}
-                                />
-                            </View>
+                            <NavigationButtonField
+                                label={t("hunt.individualHunt.locationCoordinates")}
+                                value={formatPosition({
+                                    latitude: hunt.meetingPointY,
+                                    longitude: hunt.meetingPointX,
+                                })}
+                                latitude={hunt.meetingPointY}
+                                longitude={hunt.meetingPointX}
+                                locationLabel={locationLabel}
+                            />
                         </>
                     ) : null}
                     {huntDogs.length > 0 && <ReadOnlyField label={t("hunt.individualHunt.dogs")} value={huntDogs} />}
-                    {huntedSpecies.length > 0 && (
+                    {!hunt.hasTargetSpecies ? (
+                        <ReadOnlyField
+                            label={t("hunt.individualHunt.huntingSpecies")}
+                            value={t("hunt.individualHunt.huntAllSpecies")}
+                        />
+                    ) : huntedSpecies.length > 0 ? (
                         <ReadOnlyField label={t("hunt.individualHunt.huntingSpecies")} value={huntedSpecies} />
-                    )}
+                    ) : null}
                     {isConcluded ? <HuntedSpeciesList hunt={hunt} /> : null}
-                    {getEquipmentTranslations(hunt).length > 0 && (
-                        <ReadOnlyField label={t("hunt.equipment.additional")} value={getEquipmentTranslations(hunt)} />
+                    {getEquipmentTranslations(hunt, t).length > 0 && (
+                        <ReadOnlyField
+                            label={t("hunt.equipment.additional")}
+                            value={getEquipmentTranslations(hunt, t)}
+                        />
                     )}
                     {isInStation && hunterNameAndCardNumber && (
                         <ReadOnlyField label={t("hunt.individualHunt.hunter")} value={hunterNameAndCardNumber} />
@@ -453,45 +384,62 @@ function Content({ hunt }: ContentProps) {
                         />
                     </View>
                 ) : null}
-                <Modal
-                    visible={showEquipmentDialog}
-                    onBackButtonPress={() => setShowEquipmentDialog(false)}
-                    children={
-                        <View>
-                            <Text style={styles.title} size={18} weight="bold">
-                                {t("hunt.individualHunt.addAdditionalEquipment")}
-                            </Text>
-                            <CheckboxList
-                                label={t("hunt.equipment.additional")}
-                                checkedValues={equipmentList.equipment}
-                                onChange={onEquipmentChange}
-                                options={equipmentOptions}
-                            />
-                            <Spacer size={12} />
-                            <AddSpecialEquipmentMultiSelect
-                                label={t("hunt.individualHunt.huntingSpecies")}
-                                options={filteredSpeciesOptions}
-                                values={selectedSpeciesWithEquipmentList}
-                                onChange={(values) => {
-                                    setSelectedSpeciesWithEquipmentList(values);
-                                }}
-                                disabled={!hasEquipment}
-                            />
-                            <Spacer size={24} />
-                            <Button
-                                disabled={!hasEquipment || selectedSpeciesWithEquipmentList.length === 0}
-                                title={t("general.save")}
-                                onPress={onSaveAdditionalEquipment}
-                            />
-                            <Spacer size={8} />
-                            <Button
-                                variant="secondary-outlined"
-                                title={t("general.cancel")}
-                                onPress={onCloseAdditionalEquipmentDialog}
-                            />
-                        </View>
-                    }
-                />
+                <Modal visible={showEquipmentDialog} onBackButtonPress={() => setShowEquipmentDialog(false)}>
+                    <View>
+                        <Text style={styles.title} size={18} weight="bold">
+                            {t("hunt.individualHunt.addAdditionalEquipment")}
+                        </Text>
+                        <CheckboxList
+                            label={t("hunt.equipment.additional")}
+                            checkedValues={equipmentList.equipment}
+                            onChange={onEquipmentChange}
+                            options={equipmentOptions}
+                        />
+                        <Spacer size={12} />
+                        <AddSpecialEquipmentMultiSelect
+                            label={t("hunt.individualHunt.huntingSpecies")}
+                            options={filteredSpeciesOptions}
+                            values={selectedSpeciesWithEquipmentList}
+                            onChange={(values) => {
+                                setSelectedSpeciesWithEquipmentList(values);
+                            }}
+                            disabled={!hasEquipment}
+                        />
+                        <Spacer size={24} />
+                        <Button
+                            disabled={!hasEquipment || selectedSpeciesWithEquipmentList.length === 0}
+                            title={t("general.save")}
+                            onPress={onSaveAdditionalEquipment}
+                        />
+                        <Spacer size={8} />
+                        <Button
+                            variant="secondary-outlined"
+                            title={t("general.cancel")}
+                            onPress={onCloseAdditionalEquipmentDialog}
+                        />
+                    </View>
+                    <Dialog
+                        visible={showConfirmationDialog}
+                        icon="hunt"
+                        title={t("hunt.individualHunt.addEquipmentConfirmation.title", {
+                            huntCode: hunt.vmdCode,
+                        })}
+                        onBackButtonPress={onSaveAdditionalEquipmentReject}
+                        buttons={
+                            <>
+                                <Button
+                                    title={t("hunt.individualHunt.addEquipmentConfirmation.confirm")}
+                                    onPress={onSaveAdditionalEquipmentConfirm}
+                                />
+                                <Button
+                                    variant="secondary-outlined"
+                                    title={t("hunt.individualHunt.addEquipmentConfirmation.reject")}
+                                    onPress={onSaveAdditionalEquipmentReject}
+                                />
+                            </>
+                        }
+                    />
+                </Modal>
                 <Dialog
                     visible={showHuntDialog}
                     icon={isHuntActive ? "lock" : "hunt"}
@@ -555,11 +503,6 @@ const styles = StyleSheet.create({
     formContentContainer: {
         flex: 1,
         gap: 24,
-    },
-    navigation: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
     },
     validationErrorMessages: {
         gap: 19,

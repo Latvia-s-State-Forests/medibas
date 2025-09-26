@@ -8,7 +8,7 @@ import { Button } from "~/components/button";
 import { useConfirmationDialog } from "~/components/confirmation-dialog-provider";
 import { Header } from "~/components/header";
 import { useCreateInfrastructureChange } from "~/components/infrastructure-provider";
-import { NavigationButton } from "~/components/navigation-button";
+import { NavigationButtonField } from "~/components/navigation-button-field";
 import { ReadOnlyField } from "~/components/read-only-field";
 import { usePermissions } from "~/hooks/use-permissions";
 import { theme } from "~/theme";
@@ -71,20 +71,16 @@ export function DistrictInfrastructureDetailScreen(props: DistrictInfrastructure
             >
                 <View style={styles.detailContentContainer}>
                     <InfrastructurePlace latitude={detail.locationY} longitude={detail.locationX} />
-                    <View style={styles.navigation}>
-                        <ReadOnlyField
-                            label={t("mtl.infrastructure.coordinates")}
-                            value={formatPosition({
-                                latitude: detail.locationY,
-                                longitude: detail.locationX,
-                            })}
-                        />
-                        <NavigationButton
-                            latitude={detail.locationY}
-                            longitude={detail.locationX}
-                            locationLabel={locationLabel}
-                        />
-                    </View>
+                    <NavigationButtonField
+                        label={t("mtl.infrastructure.coordinates")}
+                        value={formatPosition({
+                            latitude: detail.locationY,
+                            longitude: detail.locationX,
+                        })}
+                        latitude={detail.locationY}
+                        longitude={detail.locationX}
+                        locationLabel={locationLabel}
+                    />
                     <ReadOnlyField
                         label={t("mtl.infrastructure.timeAdded")}
                         value={formatDateTime(detail.createdOnDevice)}
@@ -118,10 +114,5 @@ const styles = StyleSheet.create({
     detailContentContainer: {
         flex: 1,
         gap: 24,
-    },
-    navigation: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
     },
 });

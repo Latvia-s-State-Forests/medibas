@@ -26,43 +26,39 @@ export function BeaterFormModal(props: BeaterFormModalProps) {
     const isSubmitButtonEnabled = firstName.trim() && lastName.trim();
 
     return (
-        <Modal
-            visible={props.visible}
-            onBackButtonPress={props.onReject}
-            children={
-                <View>
-                    <Text style={styles.title} size={18} weight="bold">
-                        {t("hunt.drivenHunt.beaterManagement.form.title")}
-                    </Text>
-                    <View style={styles.inputsContainer}>
-                        <Input
-                            label={t("hunt.drivenHunt.beaterManagement.form.firstName")}
-                            value={firstName}
-                            onChangeText={setFirstName}
-                            maxLength={MAX_LENGTH}
-                        />
-                        <Input
-                            label={t("hunt.drivenHunt.beaterManagement.form.lastName")}
-                            value={lastName}
-                            onChangeText={setLastName}
-                            maxLength={MAX_LENGTH}
-                        />
-                    </View>
-                    <View style={styles.buttonsContainer}>
-                        <Button
-                            title={t("hunt.drivenHunt.beaterManagement.form.confirm")}
-                            onPress={onSubmit}
-                            disabled={!isSubmitButtonEnabled}
-                        />
-                        <Button
-                            variant="secondary-outlined"
-                            title={t("hunt.drivenHunt.beaterManagement.form.reject")}
-                            onPress={props.onReject}
-                        />
-                    </View>
+        <Modal visible={props.visible} onBackButtonPress={props.onReject}>
+            <View>
+                <Text style={styles.title} size={18} weight="bold">
+                    {t("hunt.drivenHunt.beaterManagement.form.title")}
+                </Text>
+                <View style={styles.inputsContainer}>
+                    <Input
+                        label={t("hunt.drivenHunt.beaterManagement.form.firstName")}
+                        value={firstName}
+                        onChangeText={setFirstName}
+                        maxLength={MAX_LENGTH}
+                    />
+                    <Input
+                        label={t("hunt.drivenHunt.beaterManagement.form.lastName")}
+                        value={lastName}
+                        onChangeText={setLastName}
+                        maxLength={MAX_LENGTH}
+                    />
                 </View>
-            }
-        />
+                <View style={styles.buttonsContainer}>
+                    <Button
+                        title={t("hunt.drivenHunt.beaterManagement.form.confirm")}
+                        onPress={onSubmit}
+                        disabled={!isSubmitButtonEnabled}
+                    />
+                    <Button
+                        variant="secondary-outlined"
+                        title={t("hunt.drivenHunt.beaterManagement.form.reject")}
+                        onPress={props.onReject}
+                    />
+                </View>
+            </View>
+        </Modal>
     );
 }
 

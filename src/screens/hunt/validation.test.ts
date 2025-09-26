@@ -4,8 +4,7 @@ import {
     getUnlimitedPreyValidationErrors,
 } from "~/screens/hunt/validation";
 import { AgeId, GenderId, HuntedTypeId } from "~/types/classifiers";
-import { UnlimitedPreyState } from "~/types/hunt";
-import { LimitedPreyState } from "~/types/hunt";
+import { LimitedPreyState, UnlimitedPreyState } from "~/types/hunt";
 import { Permit } from "~/types/permits";
 
 const position = { latitude: 56.918666, longitude: 24.091752, accuracy: 10 };

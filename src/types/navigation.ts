@@ -1,5 +1,6 @@
 import { NavigatorScreenParams } from "@react-navigation/native";
 import { LimitedPreyState, LimitedSpecies, UnlimitedPreyState } from "~/types/hunt";
+import { IndividualHuntStatisticsItem, StatisticsSpeciesItem, DrivenHuntStatisticsItem } from "~/types/statistics";
 import { DamageState } from "./damage";
 import { DistrictDamage } from "./district-damages";
 import { Hunt, Hunter } from "./hunts";
@@ -22,11 +23,33 @@ export type RootNavigatorParams = {
     DrivenHuntFormScreen: { huntToEdit?: Hunt; huntToCopy?: Hunt };
     DrivenHuntListScreen: undefined;
     DrivenHuntReducedDetailScreen: { huntId: number };
+    DrivenHuntStatisticsScreen: undefined;
+    DrivenHuntListStatisticsScreen: {
+        districtId: number;
+        huntPlaceName: string;
+        selectedSeason?: string;
+        filterType?: "all" | "withAnimals" | "withoutAnimals";
+        filteredHunts: DrivenHuntStatisticsItem[];
+    };
+    DrivenHuntStatisticsDetailScreen: {
+        statisticsItem: DrivenHuntStatisticsItem;
+    };
     EditProfileScreen: undefined;
     HuntActivitiesListScreen: undefined;
     IndividualHuntDetailScreen: { huntId: number };
     IndividualHuntFormScreen: { hunt?: Hunt };
     IndividualHuntListScreen: undefined;
+    IndividualHuntListStatisticsScreen: {
+        huntEventPlaceId: number;
+        huntPlaceName: string;
+        selectedSeason?: string;
+        filterType?: "all" | "withAnimals" | "withoutAnimals";
+        filteredHunts: IndividualHuntStatisticsItem[];
+    };
+    IndividualHuntStatisticsDetailScreen: {
+        statisticsItem: IndividualHuntStatisticsItem;
+    };
+
     LicenseDetailScreen: { dependency: string; license: string };
     LicenseListScreen: undefined;
     LimitedPreyScreen: {
@@ -45,6 +68,7 @@ export type RootNavigatorParams = {
     MemberManagementScreen: undefined;
     MemberRegistrationScreen: undefined;
     MemberRolesScreen: { member: Member; districtId: number; mode: "view" | "edit" };
+    MyStatisticsScreen: undefined;
     MenuScreen: undefined;
     NewsScreen: undefined;
     ObservationsScreenRoot: { initialState?: ObservationsState; huntEventId: number; huntVmdCode: string };
@@ -58,6 +82,19 @@ export type RootNavigatorParams = {
     ReportListScreen: undefined;
     ReportStatusModal: { reportId: string };
     SettingsScreen: undefined;
+    IndividualHuntStatisticsScreen: undefined;
+    SpeciesStatisticsScreen: undefined;
+    SpeciesStatisticsListScreen: {
+        speciesName: string;
+        speciesType: "limited" | "unlimited" | "limitedUnlimited";
+        selectedSeason: string;
+        filteredItems: StatisticsSpeciesItem[];
+    };
+    SpeciesStatisticsDetailScreen: {
+        statisticsItem: StatisticsSpeciesItem;
+        speciesName: string;
+        speciesType: "limited" | "unlimited" | "limitedUnlimited";
+    };
     TabsNavigator: NavigatorScreenParams<TabsNavigatorParams>;
     UnlimitedPreyScreen: { speciesId: string; initialState?: UnlimitedPreyState };
 };
@@ -97,11 +134,11 @@ export type ComponentExamplesNavigatorParams = {
     InjuredAnimalExampleScreen: undefined;
     InputExampleScreen: undefined;
     LogoutButtonExampleScreen: undefined;
-    MapPinExampleScreen: undefined;
     MenuListItemExampleScreen: undefined;
     ModalExampleScreen: undefined;
     MultiSelectExampleScreen: undefined;
-    NavigationButtonExampleScreen: undefined;
+    NavigationButtonFieldExampleScreen: undefined;
+    NewsListItemExampleScreen: undefined;
     PositionSelectExampleScreen: undefined;
     PressableListItemExampleScreen: undefined;
     QRCodeContainerExampleScreen: undefined;
@@ -113,7 +150,10 @@ export type ComponentExamplesNavigatorParams = {
     ScrollableSelectionFieldsExampleScreen: undefined;
     SegmentedControlExampleScreen: undefined;
     SelectExampleScreen: undefined;
+    SpeciesStatisticsReportItemExampleScreen: undefined;
     SpinnerExampleScreen: undefined;
+    StatisticsHuntInfoCardExampleScreen: undefined;
+    StatisticsSummaryRowExampleScreen: undefined;
     SquareIconButtonExampleScreen: undefined;
     StepperExampleScreen: undefined;
     SwitchExampleScreen: undefined;
@@ -123,8 +163,8 @@ export type ComponentExamplesNavigatorParams = {
 };
 
 declare global {
-    // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace ReactNavigation {
+        // eslint-disable-next-line @typescript-eslint/no-empty-object-type
         interface RootParamList extends RootNavigatorParams {}
     }
 }

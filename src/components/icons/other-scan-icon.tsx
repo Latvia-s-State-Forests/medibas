@@ -1,0 +1,18 @@
+import * as React from "react";
+import Svg, { Path } from "react-native-svg";
+import { Color, theme } from "~/theme";
+
+type OtherScanIconProps = {
+    width?: number;
+    height?: number;
+    color?: Color;
+};
+
+export function OtherScanIcon({ width = 18, height = 18, color = "gray8" }: OtherScanIconProps) {
+    const fillColor = theme.color[color as keyof typeof theme.color];
+    return (
+        <Svg width={width} height={height} viewBox="0 0 18 18" fill={fillColor}>
+            <Path d="M16.499 1.001c.5 0 .5 0 .5 1.202V5c0 .552-.052 1 .5 1s.5-.448.5-1V2c0-1.214.016-1.999-1.203-1.999H13.5c-.552 0-1-.052-1 .5s.448.5 1 .5h3ZM1.501 16.999c-.5 0-.5 0-.5-1.202V13c0-.552.053-1-.5-1-.552 0-.5.448-.5 1v3c0 1.215-.016 1.999 1.203 1.999H4.5c.552 0 1 .052 1-.5s-.5-.503-1-.501h-3Zm14.998 0c.5 0 .5 0 .5-1.202V13c0-.552-.052-1 .5-1s.5.448.5 1v3c0 1.215.016 1.999-1.203 1.999H13.5c-.552 0-1 .052-1-.5s.448-.501 1-.501h3ZM1.503 1.001c-.5 0-.5 0-.5 1.202V5c0 .552.052 1-.5 1-.553 0-.5-.448-.5-1V2C.003.787-.014.002 1.205.002h3.297c.553 0 1-.052 1 .5s-.447.5-1 .5h-3Z" />
+        </Svg>
+    );
+}

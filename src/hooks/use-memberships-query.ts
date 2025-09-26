@@ -8,15 +8,20 @@ import { Membership } from "~/types/mtl";
 export function useMembershipsQuery(enabled: boolean) {
     const userStorage = useUserStorage();
 
-    return useQuery<Membership[]>(queryKeys.memberships, () => api.getMemberships(), {
-        initialData: userStorage.getMemberships(),
-        onSuccess: (memberships) => {
-            logger.log("Memberships loaded");
-            userStorage.setMemberships(memberships);
+    return useQuery<Membership[]>({
+        queryKey: queryKeys.memberships,
+        queryFn: async () => {
+            try {
+                const memberships = await api.getMemberships();
+                logger.log("Memberships loaded");
+                userStorage.setMemberships(memberships);
+                return memberships;
+            } catch (error) {
+                logger.error("Failed to load memberships", error);
+                throw error;
+            }
         },
-        onError: (error) => {
-            logger.error("Failed to load memberships", error);
-        },
+        initialData: () => userStorage.getMemberships(),
         enabled,
     });
 }

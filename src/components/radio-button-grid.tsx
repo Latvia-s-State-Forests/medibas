@@ -18,7 +18,7 @@ type RadioButtonGridProps = {
 };
 
 export function RadioButtonGrid({ label, options, onChange, disabled, style, value }: RadioButtonGridProps) {
-    const rows: JSX.Element[] = [];
+    const rows: React.JSX.Element[] = [];
 
     for (let i = 0; i < options.length; i += 2) {
         const option1 = options[i];

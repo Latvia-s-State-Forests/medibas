@@ -1,4 +1,4 @@
-import { IconName } from "~/components/icon";
+import { LargeIconName, MediumIconName } from "~/components/icon";
 import {
     AgeId,
     DamageTypeId,
@@ -52,9 +52,9 @@ interface SupportConfiguration {
 }
 
 interface DamageConfiguration {
-    typeIcons: Record<DamageTypeId, IconName<32>>;
+    typeIcons: Record<DamageTypeId, LargeIconName>;
     land: {
-        typeIcons: Record<MainAgriculturalLandType, IconName<32>>;
+        typeIcons: Record<MainAgriculturalLandType, LargeIconName>;
         count: Count;
     };
     forest: {
@@ -68,13 +68,13 @@ interface DamageConfiguration {
 }
 
 interface HuntingInfrastructureConfiguration {
-    typeIcons: Record<HuntingInfrastructureTypeId, IconName<32>>;
+    typeIcons: Record<HuntingInfrastructureTypeId, LargeIconName>;
     daysToKeepChangesFor: number;
 }
 
 interface HuntConfiguration {
     count: Count;
-    speciesIcons: Record<SpeciesId, IconName<32>>;
+    speciesIcons: Record<SpeciesId, LargeIconName>;
     notValidForInjuredSpecies: SpeciesId[];
     plannedSpeciesUsingEquipment: SpeciesId[];
     plannedSpeciesNearWaters: SpeciesId[];
@@ -95,13 +95,13 @@ export interface MapConfiguration {
 }
 
 interface MtlConfiguration {
-    memberIcons: Record<MemberRole, IconName<24>>;
+    memberIcons: Record<MemberRole, MediumIconName>;
     memberRoleSortOrder: Record<MemberRole, number>;
 }
 
 interface ObservationsConfiguration {
-    typeIcons: Record<ObservationTypeId, IconName<32>>;
-    speciesIcons: Record<MainObservationSpecies, IconName<32>>;
+    typeIcons: Record<ObservationTypeId, LargeIconName>;
+    speciesIcons: Record<MainObservationSpecies, LargeIconName>;
     animals: {
         maxCount: number;
         defaultGender?: GenderId;
@@ -165,11 +165,16 @@ interface ReachabilityConfiguration {
     timeout: number;
 }
 
+interface StatisticsConfiguration {
+    unlimitedSpeciesPermitId: number;
+}
+
 export interface Configuration {
     authentication: AuthenticationConfiguration;
     store: StoreConfiguration;
     pin: PinConfiguration;
     support: SupportConfiguration;
+    statistics: StatisticsConfiguration;
     damage: DamageConfiguration;
     huntingInfrastructure: HuntingInfrastructureConfiguration;
     reports: ReportsConfiguration;

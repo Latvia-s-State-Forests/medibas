@@ -13,10 +13,34 @@ type MapProps = {
     onMapDragged?: () => void;
     onViewPositionChanged?: (center: GeoJSON.Position, zoom: number | undefined) => void;
     onFeaturesSelected?: (features: SelectedFeature[]) => void;
+    onLineDrawn?: (coordinates: GeoJSON.Position[], lineId: string) => void;
+    onPolygonDrawn?: (coordinates: GeoJSON.Position[], polygonId: string) => void;
+    onLineModified?: (coordinates: GeoJSON.Position[], lineId: string) => void;
+    onPolygonModified?: (coordinates: GeoJSON.Position[], polygonId: string) => void;
+    onMultiplePoints?: (containsMultiplePoints: boolean) => void;
+    onFirstPoint?: (hasFirstPoint: boolean) => void;
+    onDrawingCleared?: () => void;
 };
 
 export const Map = React.forwardRef<MapHandle, MapProps>(
-    ({ onLoad, onLoadEnd, onMapDragged, onViewPositionChanged, onFeaturesSelected }, ref) => {
+    (
+        {
+            onLoad,
+            onLoadEnd,
+            onMapDragged,
+            onViewPositionChanged,
+            onFeaturesSelected,
+            onLineDrawn,
+            onPolygonDrawn,
+            onLineModified,
+            onPolygonModified,
+            onMultiplePoints,
+            onFirstPoint,
+            onDrawingCleared,
+        },
+
+        ref
+    ) => {
         const webViewRef = React.useRef<WebView>(null);
         const source = useMapSource();
 
@@ -30,6 +54,26 @@ export const Map = React.forwardRef<MapHandle, MapProps>(
             console.log("onMessage", event.nativeEvent.data);
             const message = JSON.parse(event.nativeEvent.data) as WebMapEvent;
 
+            if (message.type === "LINE_DRAWN") {
+                onLineDrawn && onLineDrawn(message.coordinates, message.lineId);
+            }
+
+            if (message.type === "POLYGON_DRAWN") {
+                onPolygonDrawn && onPolygonDrawn(message.coordinates, message.polygonId);
+            }
+
+            if (message.type === "POLYGON_MODIFIED") {
+                onPolygonModified && onPolygonModified(message.coordinates, message.polygonId);
+            }
+
+            if (message.type === "LINE_MODIFIED") {
+                onLineModified && onLineModified(message.coordinates, message.lineId);
+            }
+
+            if (message.type === "DRAWINGS_CLEARED") {
+                onDrawingCleared && onDrawingCleared();
+            }
+
             if (message.type === "MAP_DRAGGED" && onMapDragged) {
                 onMapDragged();
             }
@@ -38,6 +82,12 @@ export const Map = React.forwardRef<MapHandle, MapProps>(
             }
             if (message.type === "FEATURE_SELECTED") {
                 onFeaturesSelected && onFeaturesSelected(message.selected);
+            }
+            if (message.type === "DRAWING_HAS_MULTIPLE_POINTS") {
+                onMultiplePoints && onMultiplePoints(true);
+            }
+            if (message.type === "DRAWING_HAS_FIRST_POINT") {
+                onFirstPoint && onFirstPoint(true);
             }
         }
 

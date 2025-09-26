@@ -1,11 +1,11 @@
 import * as React from "react";
-import { StyleSheet, TouchableOpacity, ViewStyle, StyleProp, View } from "react-native";
-import { IconName, MediumIcon } from "~/components/icon";
+import { StyleProp, StyleSheet, TouchableOpacity, View, ViewStyle } from "react-native";
+import { MediumIcon, MediumIconName } from "~/components/icon";
 import { Color } from "~/theme";
 import { BorderlessBadge } from "./borderless-badge";
 
 type IconButtonProps = {
-    name: IconName<24>;
+    name: MediumIconName;
     onPress: () => void;
     disabled?: boolean;
     style?: StyleProp<ViewStyle>;

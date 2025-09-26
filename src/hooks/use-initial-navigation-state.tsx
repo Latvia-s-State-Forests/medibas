@@ -2,7 +2,6 @@ import * as React from "react";
 import { FormState } from "~/types/form-state";
 import { useUserStorage } from "../machines/authentication-machine";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type InitialNavigationState = any;
 
 // Load form state and pending photo uri from storage and use it to restore the navigation state.

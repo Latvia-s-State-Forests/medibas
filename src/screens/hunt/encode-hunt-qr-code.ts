@@ -13,7 +13,7 @@ const huntQrCodeDataSchema = z.object({
     plannedFrom: z.string(),
     eventGuid: z.string(),
 });
-type HuntQrCodeData = z.infer<typeof huntQrCodeDataSchema>;
+export type HuntQrCodeData = z.infer<typeof huntQrCodeDataSchema>;
 
 // TODO migrate to this function
 export function encodeHuntQrCode(data: HuntQrCodeData): string {

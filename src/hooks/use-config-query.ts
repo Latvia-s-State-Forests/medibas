@@ -8,14 +8,19 @@ import { Config } from "~/types/config";
 export function useConfigQuery() {
     const userStorage = useUserStorage();
 
-    return useQuery<Config>(queryKeys.config, () => api.getConfig(), {
-        initialData: userStorage.getConfig(),
-        onSuccess: (config) => {
-            logger.log("Config loaded", config);
-            userStorage.setConfig(config);
+    return useQuery<Config>({
+        queryKey: queryKeys.config,
+        queryFn: async () => {
+            try {
+                const config = await api.getConfig();
+                logger.log("Config loaded", config);
+                userStorage.setConfig(config);
+                return config;
+            } catch (error) {
+                logger.error("Failed to load config", error);
+                throw error;
+            }
         },
-        onError: (error) => {
-            logger.error("Failed to load config", error);
-        },
+        initialData: () => userStorage.getConfig(),
     });
 }

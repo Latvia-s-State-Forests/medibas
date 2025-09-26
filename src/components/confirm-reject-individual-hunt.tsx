@@ -1,9 +1,10 @@
-import { useInterpret } from "@xstate/react";
+import { useActorRef } from "@xstate/react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { ActionButton } from "~/components/action-button";
 import { Spacer } from "~/components/spacer";
+import { logger } from "~/logger";
 import {
     approveOrRejectIndividualHuntMachine,
     ApproveRejectStatusDialog,
@@ -17,14 +18,25 @@ export function ConfirmRejectIndividualHunt(props: ConfirmRejectIndividualHuntPr
     const { huntId } = props;
     const { t } = useTranslation();
     const [isRejection, setIsRejection] = React.useState(false);
-    const service = useInterpret(() => approveOrRejectIndividualHuntMachine);
+    const actor = useActorRef(approveOrRejectIndividualHuntMachine, {
+        inspect: (inspectEvent) => {
+            if (inspectEvent.type === "@xstate.snapshot") {
+                const snapshot = inspectEvent.actorRef?.getSnapshot();
+                if (snapshot?.machine?.id === approveOrRejectIndividualHuntMachine.id) {
+                    logger.log(
+                        "REJECT HUNT " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event)
+                    );
+                }
+            }
+        },
+    });
 
     function onReject() {
         setIsRejection(true);
     }
 
     function onApproveSubmit() {
-        service.send({
+        actor.send({
             type: "SUBMIT",
             payload: {
                 id: huntId,
@@ -54,7 +66,7 @@ export function ConfirmRejectIndividualHunt(props: ConfirmRejectIndividualHuntPr
 
             <ApproveRejectStatusDialog
                 huntId={huntId}
-                service={service}
+                actor={actor}
                 isRejection={isRejection}
                 onCancelRejection={() => setIsRejection(false)}
             />

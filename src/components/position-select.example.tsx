@@ -44,7 +44,7 @@ export function PositionSelectExampleScreen() {
                         positionType="drivenHunt"
                         onMark={onSelectPosition}
                         position={selectedPosition}
-                        activeDistrictId={selectedDistrictId}
+                        activeDistrictIds={selectedDistrictId ? [selectedDistrictId] : []}
                     />
                 </View>
                 <Spacer size={16} />
@@ -55,7 +55,7 @@ export function PositionSelectExampleScreen() {
                         positionType="individualHunt"
                         onMark={onSelectPosition}
                         position={selectedPosition}
-                        activeDistrictId={selectedDistrictId}
+                        activeDistrictIds={selectedDistrictId ? [selectedDistrictId] : []}
                     />
                 </View>
                 <Spacer size={16} />
@@ -66,7 +66,7 @@ export function PositionSelectExampleScreen() {
                         positionType="infrastructure"
                         onMark={onSelectPosition}
                         position={selectedPosition}
-                        activeDistrictId={selectedDistrictId}
+                        activeDistrictIds={selectedDistrictId ? [selectedDistrictId] : []}
                     />
                 </View>
                 <Spacer size={16} />
@@ -77,7 +77,7 @@ export function PositionSelectExampleScreen() {
                         positionType="drivenHunt"
                         onMark={onSelectSecondPosition}
                         position={selectSecondPosition}
-                        activeDistrictId={selectedDistrictId}
+                        activeDistrictIds={selectedDistrictId ? [selectedDistrictId] : []}
                     />
                 </View>
             </ScrollView>

@@ -1,9 +1,10 @@
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useActor, useInterpret } from "@xstate/react";
+import { useActorRef, useSelector } from "@xstate/react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, Pressable, ScrollView, StyleSheet, TextInput, TextInputProps, View } from "react-native";
+import { Platform, Pressable, StyleSheet, TextInput, TextInputProps, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ActorRefFrom } from "xstate";
 import { Button } from "~/components/button";
@@ -43,22 +44,27 @@ export function PermitDistributionScreen(props: PermitDistributionScreenProps) {
     const { t } = useTranslation();
     const navigation = useNavigation();
     const contracts = useContracts();
-    const actor = useInterpret(() => permitDistributionMachine, {
-        actions: {
-            close: () => {
-                navigation.goBack();
+    const actor = useActorRef(
+        permitDistributionMachine.provide({
+            actions: {
+                close: () => {
+                    navigation.goBack();
+                },
             },
-        },
-    });
-
-    React.useEffect(() => {
-        const subscription = actor.subscribe((state) => {
-            logger.log("🦌 PD " + JSON.stringify(state.value) + " " + JSON.stringify(state.event));
-        });
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [actor]);
+        }),
+        {
+            inspect: (inspectEvent) => {
+                if (inspectEvent.type === "@xstate.snapshot") {
+                    const snapshot = inspectEvent.actorRef?.getSnapshot();
+                    if (snapshot?.machine?.id === permitDistributionMachine.id) {
+                        logger.log(
+                            "🦌 PD " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event)
+                        );
+                    }
+                }
+            },
+        }
+    );
 
     const contract = contracts.find((contract) => contract.id === Number(contractId));
     const permit = contract?.permits.find((permit) => permit.permitTypeId === Number(permitTypeId));
@@ -96,7 +102,8 @@ export function PermitDistributionScreen(props: PermitDistributionScreenProps) {
         <>
             <View style={styles.container}>
                 <Header title={title} />
-                <ScrollView
+                <KeyboardAwareScrollView
+                    bottomOffset={Platform.select({ ios: 24, android: 48 })}
                     contentContainerStyle={[
                         styles.body,
                         {
@@ -114,7 +121,7 @@ export function PermitDistributionScreen(props: PermitDistributionScreenProps) {
                     <Spacer size={4} />
                     <PermitCount title={t("permitDistribution.usedPermits")} count={usedCount} />
                     <PermitDistributionForm districts={contract.districts} permit={permit} onSubmit={onSubmit} />
-                </ScrollView>
+                </KeyboardAwareScrollView>
             </View>
 
             <SubmissionStatus actor={actor} />
@@ -366,6 +373,8 @@ const DistributeField = React.forwardRef<TextInput, DistributeFieldProps>(
     }
 );
 
+DistributeField.displayName = "DistributeField";
+
 const inputStyles = StyleSheet.create({
     container: {
         backgroundColor: theme.color.white,
@@ -397,27 +406,42 @@ type SubmissionStatusProps = {
     actor: ActorRefFrom<typeof permitDistributionMachine>;
 };
 
-function SubmissionStatus(props: SubmissionStatusProps) {
+function SubmissionStatus({ actor }: SubmissionStatusProps) {
     const { t } = useTranslation();
-    const [state, send] = useActor(props.actor);
+
+    const state = useSelector(actor, (snapshot) => {
+        if (snapshot.matches("loading")) {
+            return "loading";
+        }
+        if (snapshot.matches("success")) {
+            return "success";
+        }
+        if (snapshot.matches({ failure: "network" })) {
+            return "failure_network";
+        }
+        if (snapshot.matches("failure")) {
+            return "failure_other";
+        }
+        return "other";
+    });
 
     function onRetry() {
-        send({ type: "RETRY" });
+        actor.send({ type: "RETRY" });
     }
 
     function onCancel() {
-        send({ type: "CANCEL" });
+        actor.send({ type: "CANCEL" });
     }
 
-    if (state.matches("loading")) {
+    if (state === "loading") {
         return <Dialog visible icon={<Spinner />} title={t("permitDistribution.loading")} />;
     }
 
-    if (state.matches("success")) {
+    if (state === "success") {
         return <Dialog visible icon="success" title={t("permitDistribution.success")} />;
     }
 
-    if (state.matches({ failure: "network" })) {
+    if (state === "failure_network") {
         return (
             <Dialog
                 visible
@@ -434,7 +458,7 @@ function SubmissionStatus(props: SubmissionStatusProps) {
         );
     }
 
-    if (state.matches("failure")) {
+    if (state === "failure_other") {
         return (
             <Dialog
                 visible

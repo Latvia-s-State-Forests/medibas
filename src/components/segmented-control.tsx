@@ -25,7 +25,7 @@ export function SegmentedControl({ label, options, value, onChange, disabled, st
             {label && <FieldLabel style={styles.fieldLabel} label={label} />}
             <View style={styles.container}>
                 {options.map((option, index) => (
-                    <Option
+                    <SegmentedControlOption
                         index={index}
                         checked={option.value === value}
                         key={option.value}
@@ -39,7 +39,7 @@ export function SegmentedControl({ label, options, value, onChange, disabled, st
     );
 }
 
-type OptionProps = {
+type SegmentedControlOptionProps = {
     checked: boolean;
     disabled?: boolean;
     label?: string;
@@ -47,7 +47,7 @@ type OptionProps = {
     index: number;
 };
 
-function Option({ label, checked, disabled, onPress, index }: OptionProps) {
+function SegmentedControlOption({ label, checked, disabled, onPress, index }: SegmentedControlOptionProps) {
     return (
         <Pressable
             onPress={onPress}

@@ -6,8 +6,11 @@ import { Button } from "~/components/button";
 import { FieldLabel } from "~/components/field-label";
 import { Map, MapHandle } from "~/components/map/map";
 import { Spacer } from "~/components/spacer";
+import { configuration } from "~/configuration";
+import { useDetailMapLayers } from "~/hooks/use-detail-map-layers";
 import { theme } from "~/theme";
-import { initializeMap } from "~/utils/initialize-minimap";
+
+const { bounds, minZoom, maxZoom } = configuration.map;
 
 type InfrastructurePlaceProps = {
     latitude: number;
@@ -19,7 +22,9 @@ export function InfrastructurePlace(props: InfrastructurePlaceProps) {
     const { t } = useTranslation();
     const insets = useSafeAreaInsets();
     const [isMapOpen, setMapOpen] = React.useState(false);
+    const [mapLoaded, setMapLoaded] = React.useState(false);
 
+    const { layers, getActiveLayerIds } = useDetailMapLayers();
     function onMapModalOpen() {
         setMapOpen(() => true);
     }
@@ -29,8 +34,34 @@ export function InfrastructurePlace(props: InfrastructurePlaceProps) {
     }
 
     async function onLoad() {
-        await initializeMap(mapRef, props.latitude, props.longitude);
+        setMapLoaded(true);
+
+        const position: GeoJSON.Position = [props.longitude, props.latitude];
+
+        mapRef.current?.sendAction({
+            type: "initialize",
+            mode: "location",
+            layers,
+            activeLayerIds: getActiveLayerIds(),
+            center: position,
+            zoom: 16,
+            bounds,
+            minZoom,
+            maxZoom,
+            locationPinEnabled: true,
+        });
     }
+
+    // Update map layers when active layers change
+    React.useEffect(() => {
+        if (!mapLoaded) {
+            return;
+        }
+        mapRef.current?.sendAction({
+            type: "toggleLayer",
+            activeLayers: getActiveLayerIds(),
+        });
+    }, [mapLoaded, getActiveLayerIds]);
 
     return (
         <View>

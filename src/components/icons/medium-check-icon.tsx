@@ -1,0 +1,22 @@
+import * as React from "react";
+import Svg, { Path } from "react-native-svg";
+import { Color, theme } from "~/theme";
+
+type MediumCheckIconProps = {
+    width?: number;
+    height?: number;
+    color?: Color;
+};
+
+export function MediumCheckIcon({ width = 24, height = 24, color = "gray8" }: MediumCheckIconProps) {
+    const fillColor = theme.color[color as keyof typeof theme.color];
+    return (
+        <Svg width={width} height={height} viewBox="0 0 24 24" fill={fillColor}>
+            <Path
+                fillRule="evenodd"
+                d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm2 0c0 6.075-4.925 11-11 11S1 18.075 1 12 5.925 1 12 1s11 4.925 11 11Zm-12.676 3.638a.998.998 0 0 0 1.09-.217l5.414-5.414a1 1 0 0 0-1.414-1.414L10.707 13.3l-2-2a1 1 0 0 0-1.414 1.414L10 15.421a.996.996 0 0 0 .324.217Z"
+                clipRule="evenodd"
+            />
+        </Svg>
+    );
+}

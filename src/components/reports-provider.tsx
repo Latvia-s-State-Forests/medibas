@@ -1,6 +1,6 @@
-import { useActor, useInterpret, useSelector } from "@xstate/react";
+import { useActorRef, useSelector } from "@xstate/react";
 import * as React from "react";
-import { InterpreterFrom, assign, createMachine } from "xstate";
+import { ActorRefFrom, assign, fromCallback, setup } from "xstate";
 import { api } from "~/api";
 import { logger } from "~/logger";
 import { useUserStorage } from "~/machines/authentication-machine";
@@ -11,24 +11,21 @@ import { UserStorage } from "~/user-storage";
 import { networkStatusMachine } from "~/utils/network-status-machine";
 import { processReports } from "~/utils/process-reports";
 
-const ReportsContext = React.createContext<InterpreterFrom<typeof reportsMachine> | null>(null);
+const ReportsContext = React.createContext<ActorRefFrom<typeof reportsMachine> | null>(null);
 
 export function ReportsProvider({ children }: { children: React.ReactNode }) {
     const storage = useUserStorage();
-    const service = useInterpret(() =>
-        reportsMachine.withContext({ storage, reports: [], activeReportId: undefined, progress: 0 })
-    );
-
-    React.useEffect(() => {
-        const subscription = service.subscribe((state) => {
-            const message = "🗒️ " + JSON.stringify(state.value) + " " + JSON.stringify(state.event);
-            logger.log(message);
-        });
-
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [service]);
+    const service = useActorRef(reportsMachine, {
+        input: { storage },
+        inspect: (inspectEvent) => {
+            if (inspectEvent.type === "@xstate.snapshot") {
+                const snapshot = inspectEvent.actorRef?.getSnapshot();
+                if (snapshot?.machine?.id === reportsMachine.id) {
+                    logger.log("🗒️ " + JSON.stringify(snapshot.value) + " " + JSON.stringify(inspectEvent.event));
+                }
+            }
+        },
+    });
 
     return <ReportsContext.Provider value={service}>{children}</ReportsContext.Provider>;
 }
@@ -41,11 +38,6 @@ export function useReportsContext() {
     }
 
     return context;
-}
-
-export function useReportsActor() {
-    const reportsService = useReportsContext();
-    return useActor(reportsService);
 }
 
 export function useReports() {
@@ -93,216 +85,156 @@ export function useIsReportWaitingForNetwork(reportId: string) {
     });
 }
 
-const reportsMachine = createMachine(
-    {
-        id: "reports",
-        on: {
-            ADD: { actions: ["setReport", "saveReports"] },
-            RETRY: { actions: ["setPendingStatus", "saveReports"] },
+type ReportsEvent =
+    | { type: "LOADED"; reports: Report[] }
+    | { type: "ADD"; report: Report }
+    | { type: "RETRY"; reportId: string }
+    | { type: "NETWORK_AVAILABLE" }
+    | { type: "NETWORK_UNAVAILABLE" }
+    | { type: "SYNC_PROGRESS"; progress: number }
+    | { type: "SYNC_SUCCESS"; result?: ReportSyncResult }
+    | { type: "SYNC_FAILURE"; error: ReportSyncError };
+
+const reportsMachine = setup({
+    types: {
+        context: {} as {
+            storage: UserStorage;
+            reports: Report[];
+            activeReportId: string | undefined;
+            progress: number;
         },
-        initial: "loading",
-        states: {
-            loading: {
-                invoke: { src: "load" },
-                on: {
-                    LOADED: { target: "idle", actions: ["setReports"] },
-                },
-            },
-            idle: {
-                always: { target: "syncing", cond: "isReportPending" },
-            },
-            syncing: {
-                entry: ["setActiveReportId"],
-                initial: "verifyingNetworkConnection",
-                states: {
-                    verifyingNetworkConnection: {
-                        invoke: { src: networkStatusMachine },
-                        on: {
-                            NETWORK_AVAILABLE: "syncing",
-                            NETWORK_UNAVAILABLE: "waitingForNetworkConnection",
-                        },
-                    },
-                    waitingForNetworkConnection: {
-                        invoke: { src: networkStatusMachine },
-                        on: {
-                            NETWORK_AVAILABLE: "syncing",
-                        },
-                    },
-                    syncing: {
-                        entry: ["setLoadingStatus", "saveReports"],
-                        invoke: { src: "sync" },
-                        on: {
-                            SYNC_PROGRESS: { actions: ["setProgress"] },
-                            SYNC_SUCCESS: {
-                                target: "#reports.idle",
-                                actions: [
-                                    "setSuccessResult",
-                                    "updateLinkedReports",
-                                    "saveReports",
-                                    "updatePermits",
-                                    "resetActiveReportId",
-                                    "resetProgress",
-                                ],
-                            },
-                            SYNC_FAILURE: {
-                                target: "#reports.idle",
-                                actions: ["setFailureResult", "saveReports", "resetActiveReportId", "resetProgress"],
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        schema: {
-            context: {} as {
-                storage: UserStorage;
-                reports: Report[];
-                activeReportId: string | undefined;
-                progress: number;
-            },
-            events: {} as
-                | { type: "LOADED"; reports: Report[] }
-                | { type: "ADD"; report: Report }
-                | { type: "RETRY"; reportId: string }
-                | { type: "NETWORK_AVAILABLE" }
-                | { type: "NETWORK_UNAVAILABLE" }
-                | { type: "SYNC_PROGRESS"; progress: number }
-                | { type: "SYNC_SUCCESS"; result?: ReportSyncResult }
-                | { type: "SYNC_FAILURE"; error: ReportSyncError },
-        },
-        preserveActionOrder: true,
-        predictableActionArguments: true,
+        events: {} as ReportsEvent,
+        input: {} as { storage: UserStorage },
     },
-    {
-        actions: {
-            setReports: assign({
-                reports: (context, event) => {
-                    if (event.type !== "LOADED") {
-                        return context.reports;
-                    }
-                    return context.reports.concat(event.reports);
-                },
-            }),
-            setReport: assign({
-                reports: (context, event) => {
-                    if (event.type !== "ADD") {
-                        return context.reports;
-                    }
-                    return context.reports.concat(event.report);
-                },
-            }),
-            setActiveReportId: assign({
-                activeReportId: (context) => getNextReportToSync(context.reports)?.id,
-            }),
-            resetActiveReportId: assign({
-                activeReportId: undefined,
-            }),
-            setProgress: assign({
-                progress: (context, event) => {
-                    if (event.type !== "SYNC_PROGRESS") {
-                        return context.progress;
-                    }
-                    return event.progress;
-                },
-            }),
-            resetProgress: assign({
-                progress: 0,
-            }),
-            setPendingStatus: assign({
-                reports: (context, event) => {
-                    if (event.type !== "RETRY") {
-                        return context.reports;
-                    }
-
-                    return context.reports.map((report) => {
-                        if (report.id !== event.reportId) {
-                            return report;
-                        }
-                        let updatedReport: Report;
-                        if (report.status === "failure") {
-                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                            const { error, ...reportWithoutError } = report;
-                            updatedReport = { ...reportWithoutError, status: "pending" };
-                        } else {
-                            updatedReport = { ...report, status: "pending" };
-                        }
-                        return updatedReport;
-                    });
-                },
-            }),
-            setLoadingStatus: assign({
-                reports: (context) =>
-                    context.reports.map((report) => {
-                        if (report.id !== context.activeReportId) {
-                            return report;
-                        }
-                        const updatedReport: Report = { ...report, status: "loading" };
-                        return updatedReport;
-                    }),
-            }),
-            setSuccessResult: assign({
-                reports: (context, event) => {
-                    if (event.type !== "SYNC_SUCCESS") {
-                        return context.reports;
-                    }
-
-                    return context.reports.map((report) => {
-                        if (report.id !== context.activeReportId) {
-                            return report;
-                        }
-
-                        const updatedReport: Report = { ...report, status: "success", result: event.result };
-                        return updatedReport;
-                    });
-                },
-            }),
-            setFailureResult: assign({
-                reports: (context, event) => {
-                    if (event.type !== "SYNC_FAILURE") {
-                        return context.reports;
-                    }
-
-                    return context.reports.map((report) => {
-                        if (report.id !== context.activeReportId) {
-                            return report;
-                        }
-
-                        const updatedReport: Report = { ...report, status: "failure", error: event.error };
-                        return updatedReport;
-                    });
-                },
-            }),
-            saveReports: (context) => {
-                context.storage.setReports(context.reports);
+    actions: {
+        setReports: assign({
+            reports: ({ context, event }) => {
+                if (event.type !== "LOADED") {
+                    return context.reports;
+                }
+                return context.reports.concat(event.reports);
             },
-            updateLinkedReports: assign({
-                reports: (context) => {
-                    if (!context.activeReportId) {
-                        return context.reports;
-                    }
-
-                    return getUpdatedLinkedReports(context.reports, context.activeReportId);
-                },
-            }),
-            updatePermits: (context) => {
-                const report = context.reports.find((report) => report.id === context.activeReportId);
-
-                if (report?.edits[0]?.id !== FeatureLayer.LimitedHuntReport) {
-                    return;
+        }),
+        setReport: assign({
+            reports: ({ context, event }) => {
+                if (event.type !== "ADD") {
+                    return context.reports;
+                }
+                return context.reports.concat(event.report);
+            },
+        }),
+        setActiveReportId: assign({
+            activeReportId: ({ context }) => getNextReportToSync(context.reports)?.id,
+        }),
+        resetActiveReportId: assign({
+            activeReportId: undefined,
+        }),
+        setProgress: assign({
+            progress: ({ context, event }) => {
+                if (event.type !== "SYNC_PROGRESS") {
+                    return context.progress;
+                }
+                return event.progress;
+            },
+        }),
+        resetProgress: assign({
+            progress: 0,
+        }),
+        setPendingStatus: assign({
+            reports: ({ context, event }) => {
+                if (event.type !== "RETRY") {
+                    return context.reports;
                 }
 
-                queryClient.invalidateQueries(queryKeys.permits);
+                return context.reports.map((report) => {
+                    if (report.id !== event.reportId) {
+                        return report;
+                    }
+                    let updatedReport: Report;
+                    if (report.status === "failure") {
+                        const { error, ...reportWithoutError } = report;
+                        updatedReport = { ...reportWithoutError, status: "pending" };
+                    } else {
+                        updatedReport = { ...report, status: "pending" };
+                    }
+                    return updatedReport;
+                });
             },
+        }),
+        setLoadingStatus: assign({
+            reports: ({ context }) =>
+                context.reports.map((report) => {
+                    if (report.id !== context.activeReportId) {
+                        return report;
+                    }
+                    const updatedReport: Report = { ...report, status: "loading" };
+                    return updatedReport;
+                }),
+        }),
+        setSuccessResult: assign({
+            reports: ({ context, event }) => {
+                if (event.type !== "SYNC_SUCCESS") {
+                    return context.reports;
+                }
+
+                return context.reports.map((report) => {
+                    if (report.id !== context.activeReportId) {
+                        return report;
+                    }
+
+                    const updatedReport: Report = { ...report, status: "success", result: event.result };
+                    return updatedReport;
+                });
+            },
+        }),
+        setFailureResult: assign({
+            reports: ({ context, event }) => {
+                if (event.type !== "SYNC_FAILURE") {
+                    return context.reports;
+                }
+
+                return context.reports.map((report) => {
+                    if (report.id !== context.activeReportId) {
+                        return report;
+                    }
+
+                    const updatedReport: Report = { ...report, status: "failure", error: event.error };
+                    return updatedReport;
+                });
+            },
+        }),
+        saveReports: ({ context }) => {
+            context.storage.setReports(context.reports);
         },
-        guards: {
-            isReportPending: (context) => getNextReportToSync(context.reports) !== undefined,
+        updateLinkedReports: assign({
+            reports: ({ context }) => {
+                if (!context.activeReportId) {
+                    return context.reports;
+                }
+
+                return getUpdatedLinkedReports(context.reports, context.activeReportId);
+            },
+        }),
+        updatePermits: ({ context }) => {
+            const report = context.reports.find((report) => report.id === context.activeReportId);
+
+            if (report?.edits[0]?.id !== FeatureLayer.LimitedHuntReport) {
+                return;
+            }
+
+            queryClient.invalidateQueries({ queryKey: queryKeys.permits });
         },
-        services: {
-            load: (context) => (send) => {
+    },
+    guards: {
+        isReportPending: ({ context }) => getNextReportToSync(context.reports) !== undefined,
+    },
+    actors: {
+        load: fromCallback(
+            ({ sendBack, input }: { sendBack: (event: ReportsEvent) => void; input: { storage: UserStorage } }) => {
                 try {
-                    const reports: Report[] = context.storage.getReports() ?? [];
+                    const reports: Report[] = input.storage.getReports() ?? [];
                     if (!reports.length) {
-                        send({ type: "LOADED", reports });
+                        sendBack({ type: "LOADED", reports });
                         return;
                     }
                     const result = processReports(reports);
@@ -311,39 +243,113 @@ const reportsMachine = createMachine(
                         logger.log("Expired reports", result.expiredReports);
                     }
 
-                    send({ type: "LOADED", reports: result.validReports });
+                    sendBack({ type: "LOADED", reports: result.validReports });
                 } catch (error) {
                     logger.error("Failed to load reports", error);
-                    send({ type: "LOADED", reports: [] });
+                    sendBack({ type: "LOADED", reports: [] });
                 }
-            },
-            sync: (context) => (send) => {
-                const report = context.reports.find((report) => report.id === context.activeReportId);
+            }
+        ),
+        sync: fromCallback(
+            ({
+                sendBack,
+                input,
+            }: {
+                sendBack: (event: ReportsEvent) => void;
+                input: { reports: Report[]; activeReportId?: string };
+            }) => {
+                const report = input.reports.find((report) => report.id === input.activeReportId);
                 if (!report) {
-                    logger.error("No report found for activeReportId: " + context.activeReportId);
-                    send({ type: "SYNC_FAILURE", error: { type: "other" } });
+                    logger.error("No report found for activeReportId: " + input.activeReportId);
+                    sendBack({ type: "SYNC_FAILURE", error: { type: "other" } });
                     return;
                 }
 
                 api.postReport(report, (progress) => {
-                    send({ type: "SYNC_PROGRESS", progress });
+                    sendBack({ type: "SYNC_PROGRESS", progress });
                 })
                     .then((result) => {
                         if (result.success) {
-                            send({ type: "SYNC_SUCCESS", result: result.result });
+                            sendBack({ type: "SYNC_SUCCESS", result: result.result });
                         } else {
                             logger.error("Failed to sync report", result);
-                            send({ type: "SYNC_FAILURE", error: result.error });
+                            sendBack({ type: "SYNC_FAILURE", error: result.error });
                         }
                     })
                     .catch((error) => {
                         logger.error("Failed to sync report", error);
-                        send({ type: "SYNC_FAILURE", error: { type: "other" } });
+                        sendBack({ type: "SYNC_FAILURE", error: { type: "other" } });
                     });
+            }
+        ),
+    },
+}).createMachine({
+    id: "reports",
+    context: ({ input }) => ({ storage: input.storage, reports: [], progress: 0, activeReportId: undefined }),
+    on: {
+        ADD: { actions: ["setReport", "saveReports"] },
+        RETRY: { actions: ["setPendingStatus", "saveReports"] },
+    },
+    initial: "loading",
+    states: {
+        loading: {
+            invoke: {
+                src: "load",
+                input: ({ context }) => ({ storage: context.storage }),
+            },
+            on: {
+                LOADED: { target: "idle", actions: ["setReports"] },
             },
         },
-    }
-);
+        idle: {
+            always: { target: "syncing", guard: "isReportPending" },
+        },
+        syncing: {
+            entry: ["setActiveReportId"],
+            initial: "verifyingNetworkConnection",
+            states: {
+                verifyingNetworkConnection: {
+                    invoke: { src: networkStatusMachine },
+                    on: {
+                        NETWORK_AVAILABLE: "syncing",
+                        NETWORK_UNAVAILABLE: "waitingForNetworkConnection",
+                    },
+                },
+                waitingForNetworkConnection: {
+                    invoke: { src: networkStatusMachine },
+                    on: {
+                        NETWORK_AVAILABLE: "syncing",
+                    },
+                },
+                syncing: {
+                    entry: ["setLoadingStatus", "saveReports"],
+                    invoke: {
+                        src: "sync",
+                        input: ({ context }) => ({ reports: context.reports, activeReportId: context.activeReportId }),
+                    },
+                    on: {
+                        SYNC_PROGRESS: { actions: ["setProgress"] },
+                        SYNC_SUCCESS: {
+                            target: "#reports.idle",
+                            actions: [
+                                "setSuccessResult",
+                                "updateLinkedReports",
+                                "saveReports",
+                                "updatePermits",
+                                "resetActiveReportId",
+                                "resetProgress",
+                            ],
+                        },
+                        SYNC_FAILURE: {
+                            target: "#reports.idle",
+                            actions: ["setFailureResult", "saveReports", "resetActiveReportId", "resetProgress"],
+                        },
+                    },
+                },
+            },
+        },
+    },
+});
 
 function getNextReportToSync(reports: Report[]): Report | undefined {
     return reports.find((report) => {

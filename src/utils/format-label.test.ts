@@ -1,8 +1,8 @@
-import i18next from "i18next";
+import { i18n } from "~/i18n";
 import { ClassifierOptionDescription } from "~/types/classifiers";
 import { formatLabel } from "~/utils/format-label";
 
-i18next.init({
+i18n.init({
     lng: "lv",
     resources: {
         lv: {
@@ -31,20 +31,20 @@ describe("formatLabel should translate in all languages", () => {
     };
 
     it("returns lv translation", () => {
-        i18next.changeLanguage("lv");
+        i18n.changeLanguage("lv");
         const result = formatLabel(description);
         expect(result).toBe("test-lv");
     });
 
     it("returns en translation", () => {
-        i18next.changeLanguage("en");
+        i18n.changeLanguage("en");
 
         const result = formatLabel(description);
         expect(result).toBe("test-en");
     });
 
     it("returns ru translation", () => {
-        i18next.changeLanguage("ru");
+        i18n.changeLanguage("ru");
 
         const result = formatLabel(description);
         expect(result).toBe("test-ru");
@@ -59,14 +59,14 @@ describe("formatLabel should fallback to default translation", () => {
     };
 
     it("returns lv fallback from en translation", () => {
-        i18next.changeLanguage("en");
+        i18n.changeLanguage("en");
 
         const result = formatLabel(description);
         expect(result).toBe("test-lv");
     });
 
     it("returns lv fallback from ru translation", () => {
-        i18next.changeLanguage("ru");
+        i18n.changeLanguage("ru");
 
         const result = formatLabel(description);
         expect(result).toBe("test-lv");
@@ -81,22 +81,22 @@ describe("formatLabel fallback to missing label as last resort", () => {
     };
 
     it("returns lv missing label", () => {
-        i18next.changeLanguage("lv");
+        i18n.changeLanguage("lv");
         const result = formatLabel(description);
-        expect(result).toBe(i18next.t("missingLabel"));
+        expect(result).toBe(i18n.t("missingLabel"));
     });
 
     it("returns en missing label", () => {
-        i18next.changeLanguage("en");
+        i18n.changeLanguage("en");
 
         const result = formatLabel(description);
-        expect(result).toBe(i18next.t("missingLabel"));
+        expect(result).toBe(i18n.t("missingLabel"));
     });
 
     it("returns ru missing label", () => {
-        i18next.changeLanguage("ru");
+        i18n.changeLanguage("ru");
 
         const result = formatLabel(description);
-        expect(result).toBe(i18next.t("missingLabel"));
+        expect(result).toBe(i18n.t("missingLabel"));
     });
 });

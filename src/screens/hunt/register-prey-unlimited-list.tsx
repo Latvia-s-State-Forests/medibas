@@ -32,7 +32,7 @@ export function RegisterPreyUnlimitedList({ species, showTitle }: RegisterPreyUn
                         key={species.id}
                         type={formatLabel(species.description)}
                         iconName={species.icon}
-                        term={species.id === SpeciesId.OtherMammals ? "" : species.term ?? t("hunt.unlimitedTerm")}
+                        term={species.id === SpeciesId.OtherMammals ? "" : (species.term ?? t("hunt.unlimitedTerm"))}
                         onPress={() => navigation.navigate("UnlimitedPreyScreen", { speciesId: String(species.id) })}
                     />
                 );

@@ -3,7 +3,8 @@ import { randomUUID } from "expo-crypto";
 import * as React from "react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "~/components/button";
 import { CheckboxButton } from "~/components/checkbox-button";
@@ -89,7 +90,7 @@ export function LimitedPreyScreen({ navigation, route }: LimitedPreyFormProps) {
     const permissions = usePermissions();
     const userStorage = useUserStorage();
     const infectedDistricts = useInfectedDistricts();
-    const scrollViewRef = React.useRef<ScrollView>(null);
+    const scrollViewRef = React.useRef<React.ComponentRef<typeof KeyboardAwareScrollView>>(null);
     const districts = useDistricts();
 
     const { permit, huntingDistrictId, activeHuntHunters } = route.params;
@@ -279,7 +280,7 @@ export function LimitedPreyScreen({ navigation, route }: LimitedPreyFormProps) {
                   label: formatMemberLabel(hunter.huntersCardNumber, firstName, lastName),
               };
           })
-        : memberships
+        : (memberships
               .find((membership) => membership.id === huntingDistrictId)
               ?.members.filter((member) => member.cardNumber !== profile.validHuntersCardNumber)
               .map((member) => {
@@ -288,12 +289,13 @@ export function LimitedPreyScreen({ navigation, route }: LimitedPreyFormProps) {
                       value: member.cardNumber ?? "",
                       label,
                   };
-              }) ?? [];
+              }) ?? []);
 
     return (
         <View style={styles.container}>
             <Header title={formatLabel(permitType?.description)} />
-            <ScrollView
+            <KeyboardAwareScrollView
+                bottomOffset={Platform.select({ ios: 24, android: 48 })}
                 ref={scrollViewRef}
                 contentContainerStyle={{
                     paddingLeft: insets.left + 16,
@@ -419,7 +421,7 @@ export function LimitedPreyScreen({ navigation, route }: LimitedPreyFormProps) {
                 ) : null}
                 <Spacer size={inAfricanSwineFeverZone || outOfDistrictWarning || hasValidationErrors ? 24 : 12} />
                 <Button onPress={onSaveButtonPress} disabled={hasValidationErrors} title={t("hunt.submit")} />
-            </ScrollView>
+            </KeyboardAwareScrollView>
         </View>
     );
 }

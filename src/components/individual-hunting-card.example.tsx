@@ -84,6 +84,15 @@ export function IndividualHuntingCardExampleScreen() {
                     onPress={ignore}
                 />
                 <Spacer size={16} />
+                <Text>Hunting Cards without hunters name</Text>
+                <Spacer size={8} />
+                <IndividualHuntingCard
+                    date="16.11.2022."
+                    title="2563-00104"
+                    description="Ārpus iecirkņa"
+                    onPress={ignore}
+                />
+                <Spacer size={16} />
                 <Text>Hunting Cards without status and description</Text>
                 <Spacer size={8} />
                 <IndividualHuntingCard

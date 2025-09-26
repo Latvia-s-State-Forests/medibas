@@ -17,8 +17,13 @@ web-build/
 /ios
 /android
 
+/.github
+
 # Expo Modules
 /modules/**/android/build
 
 # test coverage
 coverage/
+
+# GitHub Copilot instructions (project-specific)
+.github/copilot-instructions.md
